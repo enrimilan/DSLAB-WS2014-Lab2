@@ -100,7 +100,7 @@ public class Node implements INodeCli, Runnable {
 	public void createLogFile(String request, String result){
 		BufferedWriter writer = null;
 		SimpleDateFormat sdf = threadLocal.get();
-		File file = new File(logDir+"/"+sdf.format(new Date())+componentName+".log");
+		File file = new File(logDir+"/"+sdf.format(new Date())+"_"+componentName+".log");
 		file.getParentFile().mkdirs();
 		try {
 			writer = new BufferedWriter(new PrintWriter(file));
