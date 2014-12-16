@@ -26,6 +26,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private int udpPort;
 	private int nodeTimeout;
 	private int nodeCheckPeriod;
+	private int controllerRmax;
 	private ArrayList<UserInfo> users;
 	private CopyOnWriteArrayList<NodeInfo> nodes;
 	private Shell shell;
@@ -61,6 +62,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		udpPort = config.getInt("udp.port");
 		nodeTimeout = config.getInt("node.timeout");
 		nodeCheckPeriod = config.getInt("node.checkPeriod");
+		controllerRmax = config.getInt("controller.rmax");
 	}
 
 	/**
@@ -109,7 +111,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	}
 
 	/**
-	 * Waits for incoming isAlive packets from the nodes. See {@link NodeListener} for more details.
+	 * Waits for incoming !alive and !hello packets from the nodes. See {@link NodeListener} for more details.
 	 */
 	private void startNodeListener(){
 		nodeListener = new NodeListener(udpPort, this);
@@ -144,7 +146,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		}
 		return -1;
 	}
-	
+
 	/**
 	 * Sets the users status to offline.
 	 * @param position
@@ -153,7 +155,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	public void setUserOffline(int position){
 		users.get(position).setStatus(false);
 	}
-	
+
 	/**
 	 * Gives the amount of credits that a user currently has.
 	 * @param position
@@ -163,7 +165,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	public long getCredits(int position){
 		return users.get(position).getCredits();
 	}
-	
+
 	/**
 	 * Increases or decreases the number of credits of a user
 	 * @param position
@@ -176,7 +178,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		users.get(position).setCredits(users.get(position).getCredits()+credits);
 		return users.get(position).getCredits();
 	}
-	
+
 	/**
 	 * @return the available operations
 	 */
@@ -195,7 +197,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		if(tmp.contains("/")) operations = operations + "/";
 		return operations;
 	}
-	
+
 	/**
 	 * Updates the latest time a node sent an isAlive message or registers a new node to the cloud controller. 
 	 * @param address
@@ -217,7 +219,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		}
 		nodes.add(new NodeInfo(address, tcpPort, operators, 0, true, time));
 	}
-	
+
 	/**
 	 * If no isAlive packet is received within nodeTimeout milliseconds until the actual time, a node's status is set to offline.
 	 */
@@ -228,7 +230,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			}
 		}
 	}
-	
+
 	/**
 	 * Finds the node with the lowest usage for a given operator.
 	 * @param operator 
@@ -251,6 +253,21 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			}
 		}
 		return nodeWithLowestUsage;
+	}
+
+	/**
+	 * Prepares the !info message response, which will be sent to the node.
+	 * @return the !info message, containing the list of all online nodes (IP address and port) and the maximum resource level of the cloud controller.
+	 */
+	public String prepareInfoMessage(){
+		String infos ="!init";
+		for(NodeInfo node: nodes){
+			if(node.isOnline()){
+				infos = infos + " " + node.getAddress().getHostAddress()+":"+node.getTcpPort();
+			}
+		}
+		infos = infos + " " + controllerRmax;
+		return infos;
 	}
 
 	/**
@@ -312,5 +329,5 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		CloudController cloudController = new CloudController(args[0], new Config("controller"), System.in, System.out);
 		cloudController.run();
 	}
-	
+
 }

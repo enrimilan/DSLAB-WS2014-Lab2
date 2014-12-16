@@ -28,9 +28,12 @@ public class Node implements INodeCli, Runnable {
 	private int controllerUdpPort;
 	private int nodeAlive;
 	private String nodeOperators;
+	private int nodeRmin;
+	private int resourceLevel;
+	private int newResourceLevel;
 	private Shell shell;
 	private AlivePacketSender alivePacketSender;
-	private CloudControllerListener cloudControllerListener;
+	private Listener listener;
 	private ExecutorService executor;
 	private final static ThreadLocal<SimpleDateFormat> threadLocal = new ThreadLocal<SimpleDateFormat>() {
 		protected SimpleDateFormat initialValue() {
@@ -54,7 +57,7 @@ public class Node implements INodeCli, Runnable {
 		this.shell = new Shell(componentName, userRequestStream, userResponseStream);
 		executor = Executors.newCachedThreadPool();
 	}
-	
+
 	/**
 	 * Reads all the parameters from the node's properties file.
 	 */
@@ -65,8 +68,11 @@ public class Node implements INodeCli, Runnable {
 		controllerUdpPort = config.getInt("controller.udp.port");
 		nodeAlive = config.getInt("node.alive");
 		nodeOperators = config.getString("node.operators");
+		nodeRmin = config.getInt("node.rmin");
+		resourceLevel = 0;
+		newResourceLevel = 0;
 	}
-	
+
 	/**
 	 * Registers to the shell the interactive commands that the node can perform and then starts the shell.
 	 */
@@ -74,22 +80,23 @@ public class Node implements INodeCli, Runnable {
 		shell.register(this);
 		executor.submit(shell);
 	}
-	
+
 	/**
 	 * Tells the cloud controller if this node is still alive. See {@link AlivePacketSender} for more details.
 	 */
 	private void startAlivePacketSender(){
-		alivePacketSender = new AlivePacketSender(tcpPort, controllerHost, controllerUdpPort, nodeAlive, nodeOperators);
+		alivePacketSender = new AlivePacketSender(tcpPort, controllerHost, controllerUdpPort, nodeAlive, nodeOperators,this);
 		executor.submit(alivePacketSender);
 	}
-	
+
 	/**
-	 * Listens for computation requests from the cloud controller. See {@link CloudControllerListener} for more details.
+	 * Listens for requests from the cloud controller and other nodes. See {@link Listener} for more details.
 	 */
-	private void startCloudControllerListener(){
-		cloudControllerListener = new CloudControllerListener(tcpPort,this);
-		executor.submit(cloudControllerListener);
+	private void startListener(){
+		listener = new Listener(tcpPort,this,nodeRmin);
+		executor.submit(listener);
 	}
+
 	/**
 	 * Creates a log file containing the request and the result of an operation
 	 * @param request
@@ -113,7 +120,7 @@ public class Node implements INodeCli, Runnable {
 		catch (UnsupportedEncodingException e) {} 
 		catch (IOException e) {}
 	}
-	
+
 	/**
 	 * Starts the node.
 	 */
@@ -122,7 +129,37 @@ public class Node implements INodeCli, Runnable {
 		readNodeProperties();
 		startShell();
 		startAlivePacketSender();
-		startCloudControllerListener();
+		startListener();
+	}
+	
+	/**
+	 * Sets a new temporary resource level, which will possibly be the true resource level in case of a successful Two-Phase commit.
+	 * @param resourceLevel the new resource level
+	 */
+	public void setNewResourceLevel(int resourceLevel) {
+		this.newResourceLevel = resourceLevel;
+	}
+	
+	/**
+	 * Sets the new resource level for this node(the Two-Phase commit was successful).
+	 * @param resourceLevel the new resource level
+	 */
+	public void commit(int resourceLevel){
+		this.resourceLevel = resourceLevel;
+	}
+	
+	/**
+	 * Sets the temporary resource level back to the old resource level.
+	 */
+	public void rollback(){
+		this.newResourceLevel = resourceLevel;
+	}
+	
+	/**
+	 * @return the minimum resource level of this node.
+	 */
+	public int getNodeRmin(){
+		return nodeRmin;
 	}
 
 	@Command(value="exit")
@@ -130,7 +167,7 @@ public class Node implements INodeCli, Runnable {
 	public String exit() throws IOException {
 		shell.close();
 		alivePacketSender.stopRunning();
-		cloudControllerListener.stopRunning();
+		listener.stopRunning();
 		executor.shutdown();
 		return "Shuting down "+ componentName+" now.";
 	}
@@ -154,10 +191,9 @@ public class Node implements INodeCli, Runnable {
 		return null;
 	}
 
+	@Command(value="resources")
 	@Override
 	public String resources() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		return resourceLevel+"";
 	}
-
 }

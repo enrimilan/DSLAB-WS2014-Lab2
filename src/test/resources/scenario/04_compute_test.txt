@@ -17,10 +17,10 @@ controller:	!nodes
 *	Node 			node2
 
 alice:		!compute 1 + 1 + 1 + 1 - 1 / 0
-> 		verify("Error")
+> 		verify("No nodes available")
 
 alice:		!credits
-> 		verify("250")
+> 		verify("500")
 
 controller:	!nodes
 
@@ -29,9 +29,6 @@ alice:		!compute 1 + 1 + 1 + 1 - 1 / -2
 
 alice:		!credits
 > 		verify("0")
-
-alice: 		!compute 11 - 1
->		verify("don't have enough credits")
 
 node1: 		!exit
 

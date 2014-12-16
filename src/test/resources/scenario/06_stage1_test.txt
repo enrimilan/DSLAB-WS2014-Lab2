@@ -1,0 +1,51 @@
+*	CloudController	controller
+*	Node			node1
+
+node1: 			!resources
+>			verify("1000")
+
+controller: 	!nodes
+>			verify(".*11982.*Usage: 0.*", T(test.util.Flag).REGEX)
+
+*	Node			node2
+
+node1: 			!resources
+>			verify("500")
+
+node2: 			!resources
+>			verify("500")
+
+controller: 	!nodes
+
+*	Node			node3
+*	Node 			node4
+
+node1: 			!resources
+>			verify("500")
+
+node2: 			!resources
+>			verify("500")
+
+node3:			!exit
+node4:			!exit
+node1:			!exit
+
+controller:		!nodes
+
+*	Node			node3
+*	Node			node4
+
+node2: 			!resources
+>			verify("333")
+
+node3: 			!resources
+>			verify("333")
+
+node4: 			!resources
+>			verify("333")
+
+controller: 	!nodes
+node2: 			!exit
+controller:		!exit
+node3: 			!exit
+node4: 			!exit
