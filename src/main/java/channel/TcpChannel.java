@@ -12,6 +12,7 @@ public class TcpChannel implements Channel {
 	public TcpChannel(PrintWriter out, BufferedReader in){
 		this.out = out;
 		this.in = in;
+		
 	}
 	
 	@Override
