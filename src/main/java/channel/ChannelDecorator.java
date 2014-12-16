@@ -17,5 +17,4 @@ public abstract class ChannelDecorator implements Channel {
 	public byte[] read() throws IOException {
 		return channel.read();
 	}
-	
 }

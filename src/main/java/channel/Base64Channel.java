@@ -17,5 +17,4 @@ public class Base64Channel extends ChannelDecorator {
 	public byte[] read() throws IOException {
 		return Base64.decode(read());
 	}
-
 }
