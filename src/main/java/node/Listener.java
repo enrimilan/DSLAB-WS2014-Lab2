@@ -7,6 +7,11 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.MessageDigest;
+
+import javax.crypto.Mac;
+
+import org.bouncycastle.util.encoders.Base64;
 
 /**
  * Listens for requests. In case of !compute request, if the calculation is successful, the resulting number is sent back to the cloud controller. 
@@ -21,13 +26,15 @@ public class Listener implements Runnable {
 	private int nodeRmin;
 	private PrintWriter out;
 	private BufferedReader in;
+	private Mac hMac;
 
 	public Listener(int tcpPort, Node node, int nodeRmin){
 		this.node = node;
 		this.tcpPort = tcpPort;
 		this.nodeRmin = nodeRmin;
+		this.hMac = node.getHMAC();
 	}
-	
+
 	/**
 	 * Stops listening for computation requests.
 	 */
@@ -39,6 +46,31 @@ public class Listener implements Runnable {
 		catch (IOException e) {}
 	}
 	
+	/**
+	 * Checks whether the HMAC of the received plaintext is equal to the HMAC that was sent by the communication partner
+	 * @param receivedHMAC
+	 * @param receivedPlainText
+	 * @return true, if the HMACs are equal
+	 */
+	private boolean HMACsAreEqual(String receivedHMAC, String receivedPlaintext){
+		// computedHash is the HMAC of the received plaintext 
+		hMac.update(receivedPlaintext.getBytes());
+		byte[] computedHash = hMac.doFinal();
+		// receivedHash is the HMAC that was sent by the communication partner
+		byte[] receivedHash = Base64.decode(receivedHMAC.getBytes());
+		return MessageDigest.isEqual(computedHash, receivedHash);
+	}
+	
+	/**
+	 * Prepends a given message with a new HMAC
+	 * @param message
+	 * @return the message with the HMAC prepended
+	 */
+	private String prependResponseWithHMAC(String message){
+		hMac.update(message.getBytes());
+		return new String(Base64.encode(hMac.doFinal())) +" " + message;
+	}
+
 	/**
 	 * Listens for requests from the cloud controller/node and performs the requested operation.
 	 * After it has completely processed a request and sent the response back to the cloud controller/node, the respective Socket is closed. 
@@ -55,7 +87,7 @@ public class Listener implements Runnable {
 				String request = in.readLine();
 				String splittedExp[] = request.split("\\s+");
 				String response = "";
-				
+
 				if(splittedExp[0].startsWith("!share")){
 					int resources = Integer.valueOf(splittedExp[1]);
 					if(nodeRmin>resources){
@@ -74,29 +106,36 @@ public class Listener implements Runnable {
 				else if(splittedExp[0].startsWith("!rollback")){
 					node.rollback();
 				}
-				else{
-					if(splittedExp[1].equals("+")) response = ""+(Integer.valueOf(splittedExp[0]) + Integer.valueOf(splittedExp[2]));
-					if(splittedExp[1].equals("-")) response = ""+(Integer.valueOf(splittedExp[0]) - Integer.valueOf(splittedExp[2]));
-					if(splittedExp[1].equals("*")) response = ""+(Integer.valueOf(splittedExp[0]) * Integer.valueOf(splittedExp[2]));
-					if(splittedExp[1].equals("/")) {
-						if(Integer.valueOf(splittedExp[2]) != 0){
-							double tmp = (Double.valueOf(splittedExp[0]) / Double.valueOf(splittedExp[2]));
-							if(tmp<0){
-								response = ""+(-Math.round(-tmp));
+				else if(splittedExp[1].startsWith("!compute")){
+					String plaintext = "!compute";
+					for(int i = 2; i<splittedExp.length; i++){
+						plaintext = plaintext +" "+ splittedExp[i];
+					}
+					if(!HMACsAreEqual(splittedExp[0],plaintext)){
+						response = "!tampered !compute "+splittedExp[2] + " " +splittedExp[3] + " "+splittedExp[4];
+					}
+					else{
+						if(splittedExp[3].equals("+")) response = ""+(Integer.valueOf(splittedExp[2]) + Integer.valueOf(splittedExp[4]));
+						if(splittedExp[3].equals("-")) response = ""+(Integer.valueOf(splittedExp[2]) - Integer.valueOf(splittedExp[4]));
+						if(splittedExp[3].equals("*")) response = ""+(Integer.valueOf(splittedExp[2]) * Integer.valueOf(splittedExp[4]));
+						if(splittedExp[3].equals("/")) {
+							if(Integer.valueOf(splittedExp[4]) != 0){
+								double tmp = (Double.valueOf(splittedExp[2]) / Double.valueOf(splittedExp[4]));
+								if(tmp<0){
+									response = ""+(-Math.round(-tmp));
+								}
+								else{
+									response = ""+Math.round(tmp);
+								}
 							}
 							else{
-								response = ""+Math.round(tmp);
+								response = "Error: division by 0";
 							}
 						}
-						else{
-							response = "Error: division by 0";
-						}
+						node.createLogFile(splittedExp[2] + " " +splittedExp[3] + " "+splittedExp[4], response);
 					}
-					
-					node.createLogFile(splittedExp[0] + " " +splittedExp[1] + " "+splittedExp[2], response);
-					out.println(response);
+					out.println(prependResponseWithHMAC(response));
 				}
-					
 				clientSocket.close();
 			}
 		}

@@ -8,6 +8,11 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.MessageDigest;
+
+import javax.crypto.Mac;
+
+import org.bouncycastle.util.encoders.Base64;
 
 import model.NodeInfo;
 
@@ -20,12 +25,14 @@ public class ClientHandler implements Runnable {
 	private BufferedReader in;
 	private boolean loggedIn = false;
 	private int position = -1;
+	private Mac hMac;
 
 	public ClientHandler(Socket clientSocket, CloudController cloudController){
 		this.clientSocket = clientSocket;
 		this.cloudController = cloudController;
+		this.hMac = cloudController.getHMAC();
 	}
-	
+
 	/**
 	 * Stops handling requests from the clients.
 	 * @throws IOException
@@ -42,6 +49,31 @@ public class ClientHandler implements Runnable {
 		if(out != null) out.close();
 	}
 	
+	/**
+	 * Checks whether the HMAC of the received plaintext is equal to the HMAC that was sent by the communication partner
+	 * @param receivedHMAC
+	 * @param receivedPlainText
+	 * @return true, if the HMACs are equal
+	 */
+	private boolean HMACsAreEqual(String receivedHMAC, String receivedPlaintext){
+		// computedHash is the HMAC of the received plaintext 
+		hMac.update(receivedPlaintext.getBytes());
+		byte[] computedHash = hMac.doFinal();
+		// receivedHash is the HMAC that was sent by the communication partner
+		byte[] receivedHash = Base64.decode(receivedHMAC.getBytes());
+		return MessageDigest.isEqual(computedHash, receivedHash);
+	}
+	
+	/**
+	 * Prepends a given message with a new HMAC
+	 * @param message
+	 * @return the message with the HMAC prepended
+	 */
+	private String prependRequestWithHMAC(String message){
+		hMac.update(message.getBytes());
+		return new String(Base64.encode(hMac.doFinal())) +" " + message;
+	}
+
 	/**
 	 * Handles requests from clients and changes their state.
 	 */
@@ -163,9 +195,21 @@ public class ClientHandler implements Runnable {
 										Socket socket = new Socket(node.getAddress(),node.getTcpPort());
 										PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 										BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-										out.println(result +" " +parts[i-1]+" "+parts[i]);
+										String message = prependRequestWithHMAC("!compute "+result +" " +parts[i-1]+" "+parts[i]);
+										out.println(message);
 										result = in.readLine();
-										if(result.equals("Error: division by 0")){
+										String[] splittedResult = result.split("\\s+");
+										String plaintext = "";
+										for(int j = 1; j<splittedResult.length; j++){
+											plaintext = plaintext + splittedResult[j]+" ";
+										}
+										result = plaintext.trim();
+										if(!HMACsAreEqual(splittedResult[0],result)||splittedResult[1].equals("!tampered")){
+											result = "Incorrect Hash";
+											nrOfOperations = 0;
+											break;
+										}
+										if(result.contains("Error: division by 0")){
 											break;
 										}
 										//at this point, the request has been processed successfully.
@@ -175,7 +219,7 @@ public class ClientHandler implements Runnable {
 										else{
 											node.increaseUsage(50*result.length());
 										}
-										
+
 										i=i+2;
 										socket.close();
 									}
