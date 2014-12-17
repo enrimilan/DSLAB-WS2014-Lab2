@@ -25,7 +25,7 @@ public class TcpChannel implements Channel {
 	}
 	
 	public void writeString(String message) {
-		out.write(message);
+		out.println(message);
 	}
 	
 	public String readString() throws IOException {
