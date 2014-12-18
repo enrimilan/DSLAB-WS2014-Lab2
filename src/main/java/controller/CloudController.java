@@ -9,10 +9,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
+import java.rmi.RemoteException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,10 +39,12 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private Mac hMac;
 	private ArrayList<UserInfo> users;
 	private CopyOnWriteArrayList<NodeInfo> nodes;
+	private LinkedHashMap<Character, Long> statistics;
 	private Shell shell;
 	private ClientListener clientListener;
 	private NodeListener nodeListener;
 	private NodeIsAliveChecker nodeIsAliveChecker;
+	private AdminService adminService;
 	private ExecutorService executor;
 
 	/**
@@ -59,6 +63,11 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		this.shell = new Shell(componentName, userRequestStream, userResponseStream);
 		this.users = new ArrayList<UserInfo>();
 		this.nodes = new CopyOnWriteArrayList<NodeInfo>();
+		this.statistics = new LinkedHashMap<Character, Long>();
+		statistics.put('+', (long) 0);
+		statistics.put('-', (long) 0);
+		statistics.put('*', (long) 0);
+		statistics.put('/', (long) 0);
 		this.executor = Executors.newCachedThreadPool();
 	}
 
@@ -138,6 +147,15 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private void startNodeIsAliveChecker(){
 		nodeIsAliveChecker = new NodeIsAliveChecker(nodeCheckPeriod, this);
 		executor.submit(nodeIsAliveChecker);
+	}
+
+	/**
+	 * Starts the AdminService, which communicates with the admin console via RMI.
+	 */
+	private void startAdminService(){
+		try {
+			this.adminService = new AdminService(this);
+		} catch (RemoteException e) {}
 	}
 
 	/**
@@ -283,7 +301,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		infos = infos + " " + controllerRmax;
 		return infos;
 	}
-	
+
 	/**
 	 * Generates the HMAC for this cloud
 	 * @param hMacKeyDir the directory of hmac.key
@@ -300,9 +318,30 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		hMac = Mac.getInstance("HmacSHA256");
 		hMac.init(secretKey);
 	}
-	
+
 	public Mac getHMAC(){
 		return hMac;
+	}
+
+	public synchronized LinkedHashMap<Character, Long> getStatistics(){
+		return statistics;
+	}
+
+	public synchronized void increaseStatistic(String term){
+		for(int i=0; i<term.length(); i++){
+			if(term.charAt(i)=='+'){
+				statistics.put('+', statistics.get('+') + 1);
+			}
+			if(term.charAt(i)=='-'){
+				statistics.put('-', statistics.get('-') + 1);
+			}
+			if(term.charAt(i)=='*'){
+				statistics.put('*', statistics.get('*') + 1);
+			}
+			if(term.charAt(i)=='/'){
+				statistics.put('/', statistics.get('/') + 1);
+			}
+		}
 	}
 
 	/**
@@ -316,6 +355,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		startClientListener();
 		startNodeListener();
 		startNodeIsAliveChecker();
+		startAdminService();
 	}
 
 	@Command(value="nodes")

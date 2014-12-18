@@ -172,6 +172,7 @@ public class ClientHandler implements Runnable {
 
 					//handle !compute request
 					else if(parts[0].equals("!compute")){
+						cloudController.increaseStatistic(request);
 						if(!loggedIn){
 							response = "You are not logged in!";
 						}
