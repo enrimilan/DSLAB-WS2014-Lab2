@@ -89,8 +89,19 @@ public class AdminConsole implements IAdminConsole, Runnable {
 		readAdminProperties();
 		startShell();
 	}
-
+	
 	@Command(value="subscribe")
+	public String subscribe(String username, int credits) throws RemoteException{
+		boolean subscribed = subscribe(username, credits, new NotificationCallback());
+		if(subscribed){
+			return "Successfully subscribed for user " + username + ".";
+		}
+		else{
+			return "Could not subscribe: you have already subsribed or this user does not exist or credits are less than 1";
+		}
+	}
+	
+	
 	@Override
 	public boolean subscribe(String username, int credits, INotificationCallback callback) throws RemoteException {
 		return adminService.subscribe(username, credits, callback);

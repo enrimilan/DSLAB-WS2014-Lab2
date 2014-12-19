@@ -22,6 +22,7 @@ import java.util.concurrent.Executors;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import admin.INotificationCallback;
 import model.NodeInfo;
 import model.UserInfo;
 import cli.Command;
@@ -208,6 +209,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 */
 	public long modifyCredits(int position, long credits){
 		users.get(position).setCredits(users.get(position).getCredits()+credits);
+		checkCredits(position);
 		return users.get(position).getCredits();
 	}
 
@@ -327,7 +329,11 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		return statistics;
 	}
 
-	public synchronized void increaseStatistic(String term){
+	/**
+	 * increases the operator statistics for a given term
+	 * @param term
+	 */
+	public synchronized void increaseStatistics(String term){
 		for(int i=0; i<term.length(); i++){
 			if(term.charAt(i)=='+'){
 				statistics.put('+', statistics.get('+') + 1);
@@ -342,6 +348,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				statistics.put('/', statistics.get('/') + 1);
 			}
 		}
+		//TODO please sort the linkedhashmap here
 	}
 
 	/**
@@ -403,6 +410,35 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	public static void main(String[] args) {
 		CloudController cloudController = new CloudController(args[0], new Config("controller"), System.in, System.out);
 		cloudController.run();
+	}
+
+	public boolean subscribe(String username, int credits, INotificationCallback callback) {
+		if(credits<1){
+			return false;
+		}
+		for(UserInfo u : users){
+			if(u.getUsername().equals(username) && u.getCallback()!=null){
+				return false;
+			}
+			if(u.getUsername().equals(username) && u.getCallback()==null){
+				u.subscribe(callback, credits);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void checkCredits(int position){
+		UserInfo user = users.get(position);
+		INotificationCallback callback = user.getCallback();
+		if(callback!=null && user.getCredits()<user.getThreshold()){
+			try {
+				callback.notify(user.getUsername(), (int) user.getThreshold());
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 
 }

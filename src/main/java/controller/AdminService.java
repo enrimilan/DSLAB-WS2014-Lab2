@@ -13,6 +13,7 @@ import java.util.List;
 import util.Config;
 import model.ComputationRequestInfo;
 import admin.INotificationCallback;
+import admin.NotificationCallback;
 
 public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 	
@@ -60,8 +61,7 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 	
 	@Override
 	public boolean subscribe(String username, int credits, INotificationCallback callback) throws RemoteException {
-		// TODO Auto-generated method stub
-		return false;
+		return cloudController.subscribe(username,credits,callback);
 	}
 
 	@Override

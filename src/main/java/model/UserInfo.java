@@ -1,5 +1,7 @@
 package model;
 
+import admin.INotificationCallback;
+
 /**
  * Represents all the information of a user containing the username, password, credits and if the user is online or offline.
  */
@@ -9,6 +11,8 @@ public class UserInfo{
 	private String password;
 	private long credits;
 	private boolean online;
+	private INotificationCallback callback;
+	private long threshold;
 	
 	public UserInfo(String username, String password, long credits, boolean online) {
 		this.username = username;
@@ -39,6 +43,19 @@ public class UserInfo{
 	
 	public void setStatus(boolean status){
 		online = status;
+	}
+	
+	public void subscribe(INotificationCallback callback, long threshold){
+		this.callback = callback;
+		this.threshold = threshold;
+	}
+	
+	public INotificationCallback getCallback(){
+		return callback;
+	}
+	
+	public long getThreshold(){
+		return threshold;
 	}
 
 	@Override
