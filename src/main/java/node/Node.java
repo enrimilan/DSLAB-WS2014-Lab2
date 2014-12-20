@@ -2,10 +2,12 @@ package node;
 
 import util.Config;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -15,6 +17,7 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,6 +25,7 @@ import java.util.concurrent.Executors;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import model.ComputationRequestInfo;
 import cli.Command;
 import cli.Shell;
 
@@ -134,17 +138,6 @@ public class Node implements INodeCli, Runnable {
 		catch (UnsupportedEncodingException e) {} 
 		catch (IOException e) {}
 	}
-
-	/**
-	 * Starts the node.
-	 */
-	@Override
-	public void run() {
-		readNodeProperties();
-		startShell();
-		startAlivePacketSender();
-		startListener();
-	}
 	
 	/**
 	 * Sets a new temporary resource level, which will possibly be the true resource level in case of a successful Two-Phase commit.
@@ -153,7 +146,7 @@ public class Node implements INodeCli, Runnable {
 	public void setNewResourceLevel(int resourceLevel) {
 		this.newResourceLevel = resourceLevel;
 	}
-	
+
 	/**
 	 * Sets the new resource level for this node(the Two-Phase commit was successful).
 	 * @param resourceLevel the new resource level
@@ -161,21 +154,21 @@ public class Node implements INodeCli, Runnable {
 	public void commit(int resourceLevel){
 		this.resourceLevel = resourceLevel;
 	}
-	
+
 	/**
 	 * Sets the temporary resource level back to the old resource level.
 	 */
 	public void rollback(){
 		this.newResourceLevel = resourceLevel;
 	}
-	
+
 	/**
 	 * @return the minimum resource level of this node.
 	 */
 	public int getNodeRmin(){
 		return nodeRmin;
 	}
-	
+
 	/**
 	 * Generates the HMAC for this node
 	 * @param hMacKeyDir the directory of hmac.key
@@ -192,9 +185,43 @@ public class Node implements INodeCli, Runnable {
 		hMac = Mac.getInstance("HmacSHA256");
 		hMac.init(secretKey);
 	}
-	
+
 	public Mac getHMAC(){
 		return hMac;
+	}
+	
+	/**
+	 * @return all the log files of this node as a list of DTOs
+	 * @throws IOException
+	 */
+	public ArrayList<ComputationRequestInfo> getLogs() throws IOException{
+		ArrayList<ComputationRequestInfo> logs = new ArrayList<ComputationRequestInfo>();
+		BufferedReader br = null;
+		File folder = new File(logDir);
+		if(folder.exists()){
+			File[] files = folder.listFiles();
+			for (int i = 0; i<files.length; i++){
+				br = new BufferedReader(new FileReader(logDir+"/"+files[i].getName()));
+				String request = br.readLine();
+				String response = br.readLine();
+				logs.add(new ComputationRequestInfo(files[i].getName(),componentName,request,response));
+			}
+			if(br != null){
+				br.close();
+			}
+		}
+		return logs;
+	}
+
+	/**
+	 * Starts the node.
+	 */
+	@Override
+	public void run() {
+		readNodeProperties();
+		startShell();
+		startAlivePacketSender();
+		startListener();
 	}
 
 	@Command(value="exit")

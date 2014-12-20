@@ -209,7 +209,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 */
 	public long modifyCredits(int position, long credits){
 		users.get(position).setCredits(users.get(position).getCredits()+credits);
-		checkCredits(position);
+		notifyAdmin(position);
 		return users.get(position).getCredits();
 	}
 
@@ -348,7 +348,57 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				statistics.put('/', statistics.get('/') + 1);
 			}
 		}
-		//TODO please sort the linkedhashmap here
+	}
+	
+	/**
+	 * @return a list with the currently online nodes.
+	 */
+	public ArrayList<NodeInfo> getOnlineNodes(){
+		ArrayList<NodeInfo> nodes = new ArrayList<NodeInfo>();
+		for(NodeInfo nodeInfo : this.nodes){
+			if(nodeInfo.isOnline()){
+				nodes.add(nodeInfo);
+			}
+		}
+		return nodes;
+	}
+	
+	/**
+	 * Creates a subscription for the given user and credits, which means that the administrator gets notified as soon as 
+	 * the credits fell below the threshold. The callback object make this possible.
+	 * @param username
+	 * @param credits
+	 * @param callback
+	 * @return true, if the subscription was successful.
+	 */
+	public boolean subscribe(String username, int credits, INotificationCallback callback) {
+		if(credits<1){
+			return false;
+		}
+		for(UserInfo u : users){
+			if(u.getUsername().equals(username) && u.getCallback()!=null){
+				return false;
+			}
+			if(u.getUsername().equals(username) && u.getCallback()==null){
+				u.subscribe(callback, credits);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * Notifies the admin if the credits of the given user fell below the threshold of this user.
+	 * @param position the position of the user on the list.
+	 */
+	private void notifyAdmin(int position){
+		UserInfo user = users.get(position);
+		INotificationCallback callback = user.getCallback();
+		if(callback!=null && user.getCredits()<user.getThreshold()){
+			try {
+				callback.notify(user.getUsername(), (int) user.getThreshold());
+			} catch (RemoteException e) {}
+		}
 	}
 
 	/**
@@ -411,34 +461,4 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		CloudController cloudController = new CloudController(args[0], new Config("controller"), System.in, System.out);
 		cloudController.run();
 	}
-
-	public boolean subscribe(String username, int credits, INotificationCallback callback) {
-		if(credits<1){
-			return false;
-		}
-		for(UserInfo u : users){
-			if(u.getUsername().equals(username) && u.getCallback()!=null){
-				return false;
-			}
-			if(u.getUsername().equals(username) && u.getCallback()==null){
-				u.subscribe(callback, credits);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private void checkCredits(int position){
-		UserInfo user = users.get(position);
-		INotificationCallback callback = user.getCallback();
-		if(callback!=null && user.getCredits()<user.getThreshold()){
-			try {
-				callback.notify(user.getUsername(), (int) user.getThreshold());
-			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
-
 }

@@ -6,8 +6,9 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class NotificationCallback extends UnicastRemoteObject implements INotificationCallback,Serializable {
 	
-	public NotificationCallback() throws RemoteException {	
-	}
+	private static final long serialVersionUID = -6309051212252537075L;
+
+	public NotificationCallback() throws RemoteException {}
 	
 	@Override
 	public void notify(String username, int credits) throws RemoteException {

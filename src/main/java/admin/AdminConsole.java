@@ -17,9 +17,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
- * Please note that this class is not needed for Lab 1, but will later be
- * used in Lab 2. Hence, you do not have to implement it for the first
- * submission.
+ *  The admin console reads the properties to obtain the information where the RMI registry is located. 
+ *  Afterwards it is able to retrieve the remote reference of the {@link controller.AdminService AdminService} using the binding.name 
+ *  property and the administrator can start to enter commands.
  */
 public class AdminConsole implements IAdminConsole, Runnable {
 
@@ -101,18 +101,17 @@ public class AdminConsole implements IAdminConsole, Runnable {
 		}
 	}
 	
-	
 	@Override
 	public boolean subscribe(String username, int credits, INotificationCallback callback) throws RemoteException {
 		return adminService.subscribe(username, credits, callback);
 	}
-
+	
 	@Command(value="getLogs")
 	@Override
 	public List<ComputationRequestInfo> getLogs() throws RemoteException {
 		return adminService.getLogs();
 	}
-
+	
 	@Command(value="statistics")
 	@Override
 	public LinkedHashMap<Character, Long> statistics() throws RemoteException {

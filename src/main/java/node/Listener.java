@@ -3,13 +3,17 @@ package node;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 
 import javax.crypto.Mac;
+
+import model.ComputationRequestInfo;
 
 import org.bouncycastle.util.encoders.Base64;
 
@@ -82,13 +86,22 @@ public class Listener implements Runnable {
 			serverSocket = new ServerSocket(tcpPort);
 			while(running){
 				Socket clientSocket = serverSocket.accept();
-				out = new PrintWriter(clientSocket.getOutputStream(), true);
 				in = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()));
 				String request = in.readLine();
 				String splittedExp[] = request.split("\\s+");
 				String response = "";
-
-				if(splittedExp[0].startsWith("!share")){
+				
+				if(splittedExp[0].startsWith("!getLogs")){
+					ObjectOutputStream outputStream = new ObjectOutputStream(clientSocket.getOutputStream());
+					outputStream.flush();
+					ArrayList<ComputationRequestInfo> logs = node.getLogs();
+					for(ComputationRequestInfo c : logs){
+						outputStream.writeObject(c);
+					}
+					outputStream.close();
+				}
+				else if(splittedExp[0].startsWith("!share")){
+					out = new PrintWriter(clientSocket.getOutputStream(), true);
 					int resources = Integer.valueOf(splittedExp[1]);
 					if(nodeRmin>resources){
 						response = "!nok";
@@ -98,6 +111,7 @@ public class Listener implements Runnable {
 						node.setNewResourceLevel(resources);
 					}
 					out.println(response);
+					out.close();
 				}
 				else if(splittedExp[0].startsWith("!commit")){
 					int resources = Integer.valueOf(splittedExp[1]);
@@ -107,6 +121,7 @@ public class Listener implements Runnable {
 					node.rollback();
 				}
 				else if(splittedExp[1].startsWith("!compute")){
+					out = new PrintWriter(clientSocket.getOutputStream(), true);
 					String plaintext = "!compute";
 					for(int i = 2; i<splittedExp.length; i++){
 						plaintext = plaintext +" "+ splittedExp[i];
@@ -135,6 +150,7 @@ public class Listener implements Runnable {
 						node.createLogFile(splittedExp[2] + " " +splittedExp[3] + " "+splittedExp[4], response);
 					}
 					out.println(prependResponseWithHMAC(response));
+					out.close();
 				}
 				clientSocket.close();
 			}
