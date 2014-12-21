@@ -29,7 +29,7 @@ public class HmacChannel extends ChannelDecorator {
 		hMac.update(message);
 		byte[] hash = Base64.encode(hMac.doFinal());
 		
-		String hmacmsg = hash.toString() + " " + message;
+		String hmacmsg = new String(hash) + " " + message;
 		
 		channel.write(hmacmsg.getBytes());
 	}
@@ -39,7 +39,7 @@ public class HmacChannel extends ChannelDecorator {
 		
 		byte[] received = channel.read();
 		
-		String[] splittedResult = received.toString().split("\\s+");
+		String[] splittedResult = new String (received).split("\\s+");
 		byte[] receivedHash = Base64.decode(splittedResult[0].getBytes());
 		String plaintext = "";
 		for(int j = 1; j<splittedResult.length; j++){
