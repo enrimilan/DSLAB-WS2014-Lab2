@@ -16,12 +16,13 @@ public class TcpChannel implements Channel {
 	
 	@Override
 	public void write(byte[] message) {
-		writeString(new String(message));
+		out.print(message);
+		out.println();
 	}
 
 	@Override
 	public byte[] read() throws IOException {
-		return readString().getBytes();
+		return in.readLine().getBytes();
 	}
 	
 	public void writeString(String message) {
