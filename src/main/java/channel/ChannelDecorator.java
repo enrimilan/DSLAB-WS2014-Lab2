@@ -10,6 +10,14 @@ public abstract class ChannelDecorator implements Channel {
 		this.channel = channel;
 	}
 	
+	public void setChannel(Channel channel) {
+		this.channel = channel;
+	}
+	
+	public Channel getChannel() {
+		return this.channel;
+	}
+	
 	public abstract void write(byte[] message);
 
 	public abstract byte[] read() throws IOException;
