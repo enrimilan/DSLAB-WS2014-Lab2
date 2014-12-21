@@ -9,6 +9,8 @@ import java.security.NoSuchAlgorithmException;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.bouncycastle.util.encoders.Base64;
+
 public class HmacChannel extends ChannelDecorator {
 	
 	private Mac hMac;
@@ -25,7 +27,7 @@ public class HmacChannel extends ChannelDecorator {
 	public void write(byte[] message) {
 		
 		hMac.update(message);
-		byte[] hash = hMac.doFinal();
+		byte[] hash = Base64.encode(hMac.doFinal());
 		
 		String hmacmsg = hash.toString() + " " + message;
 		
@@ -38,7 +40,7 @@ public class HmacChannel extends ChannelDecorator {
 		byte[] received = channel.read();
 		
 		String[] splittedResult = received.toString().split("\\s+");
-		byte[] receivedHash = splittedResult[0].getBytes();
+		byte[] receivedHash = Base64.decode(splittedResult[0].getBytes());
 		String plaintext = "";
 		for(int j = 1; j<splittedResult.length; j++){
 			plaintext += splittedResult[j]+" ";
