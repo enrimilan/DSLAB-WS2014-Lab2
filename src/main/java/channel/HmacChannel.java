@@ -25,13 +25,23 @@ public class HmacChannel extends ChannelDecorator {
 
 	@Override
 	public void write(byte[] message) {
-		hMac.update(message);
+		byte[] tmp = message;
+		hMac.update(tmp);
 		byte[] hash = Base64.encode(hMac.doFinal());
 		
-		String hmacmsg = new String(hash) + " " + message;
+		int ml = message.length;
+		int hl = hash.length;
+		int al = hash.length + message.length + 1;
+		char s = ' ';
 		
-		channel.write(hmacmsg.getBytes());
-		System.out.println(hmacmsg.getBytes());
+		byte[] hmacmsg = new byte[al];
+		System.arraycopy(hash, 0, hmacmsg, 0, hl);
+		hmacmsg[hl] = (byte) s;
+		System.arraycopy(message, 0, hmacmsg, hl+1, ml);
+		
+		System.out.println(new String(hmacmsg)); // TODO: remove
+		
+		channel.write(hmacmsg);
 	}
 
 	@Override
@@ -46,7 +56,6 @@ public class HmacChannel extends ChannelDecorator {
 			plaintext += splittedResult[j]+" ";
 		}
 		plaintext = plaintext.trim();
-		System.out.println(plaintext);
 		
 		hMac.update(plaintext.getBytes());
 		byte[] computedHash = hMac.doFinal();
