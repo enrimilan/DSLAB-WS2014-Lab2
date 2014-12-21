@@ -1,24 +1,57 @@
 package channel;
 
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 public class HmacChannel extends ChannelDecorator {
+	
+	private Mac hMac;
 
-	public HmacChannel(Channel channel) {
+	public HmacChannel(Channel channel, String secret) throws NoSuchAlgorithmException, InvalidKeyException {
 		super(channel);
-		// TODO Auto-generated constructor stub
+		
+		Key secretKey = new SecretKeySpec(secret.getBytes(),"HmacSHA256");
+		hMac = Mac.getInstance("HmacSHA256");
+		hMac.init(secretKey);
 	}
 
 	@Override
 	public void write(byte[] message) {
-		// TODO Auto-generated method stub
-
+		
+		hMac.update(message);
+		byte[] hash = hMac.doFinal();
+		
+		String hmacmsg = hash.toString() + " " + message;
+		
+		channel.write(hmacmsg.getBytes());
 	}
 
 	@Override
 	public byte[] read() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		
+		byte[] received = channel.read();
+		
+		String[] splittedResult = received.toString().split("\\s+");
+		byte[] receivedHash = splittedResult[0].getBytes();
+		String plaintext = "";
+		for(int j = 1; j<splittedResult.length; j++){
+			plaintext += splittedResult[j]+" ";
+		}
+		plaintext = plaintext.trim();
+		
+		hMac.update(plaintext.getBytes());
+		byte[] computedHash = hMac.doFinal();
+		
+		if (MessageDigest.isEqual(computedHash, receivedHash))
+			return plaintext.getBytes();
+		else
+			throw new IntegrityException("!tampered");
 	}
 
 }
