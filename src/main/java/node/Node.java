@@ -190,6 +190,10 @@ public class Node implements INodeCli, Runnable {
 		return hMac;
 	}
 	
+	public String getSecret() {
+		return config.getString("hmac.key");
+	}
+	
 	/**
 	 * @return all the log files of this node as a list of DTOs
 	 * @throws IOException
