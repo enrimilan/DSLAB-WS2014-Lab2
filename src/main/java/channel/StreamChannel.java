@@ -4,12 +4,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-public class TcpChannel implements Channel {
+public class StreamChannel implements Channel {
 	
 	private PrintWriter out;
 	private BufferedReader in;
 	
-	public TcpChannel(PrintWriter out, BufferedReader in){
+	public StreamChannel(PrintWriter out, BufferedReader in){
 		this.out = out;
 		this.in = in;
 	}
