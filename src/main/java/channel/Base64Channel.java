@@ -12,11 +12,11 @@ public class Base64Channel extends ChannelDecorator {
 	
 	@Override
 	public void write(byte[] message) {
-		write(Base64.encode(message));
+		channel.write(Base64.encode(message));
 	}
 
 	@Override
 	public byte[] read() throws IOException {
-		return Base64.decode(read());
+		return Base64.decode(channel.read());
 	}
 }
