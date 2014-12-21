@@ -25,13 +25,13 @@ public class HmacChannel extends ChannelDecorator {
 
 	@Override
 	public void write(byte[] message) {
-		
 		hMac.update(message);
 		byte[] hash = Base64.encode(hMac.doFinal());
 		
 		String hmacmsg = new String(hash) + " " + message;
 		
 		channel.write(hmacmsg.getBytes());
+		System.out.println(hmacmsg.getBytes());
 	}
 
 	@Override
@@ -46,6 +46,7 @@ public class HmacChannel extends ChannelDecorator {
 			plaintext += splittedResult[j]+" ";
 		}
 		plaintext = plaintext.trim();
+		System.out.println(plaintext);
 		
 		hMac.update(plaintext.getBytes());
 		byte[] computedHash = hMac.doFinal();

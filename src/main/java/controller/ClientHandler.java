@@ -8,12 +8,18 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.Mac;
 
 import org.bouncycastle.util.encoders.Base64;
 
+import channel.Channel;
+import channel.HmacChannel;
+import channel.IntegrityException;
+import channel.TcpChannel;
 import model.NodeInfo;
 
 public class ClientHandler implements Runnable {
@@ -48,7 +54,7 @@ public class ClientHandler implements Runnable {
 		if(in != null) in.close();
 		if(out != null) out.close();
 	}
-	
+
 	/**
 	 * Checks whether the HMAC of the received plaintext is equal to the HMAC that was sent by the communication partner
 	 * @param receivedHMAC
@@ -63,7 +69,7 @@ public class ClientHandler implements Runnable {
 		byte[] receivedHash = Base64.decode(receivedHMAC.getBytes());
 		return MessageDigest.isEqual(computedHash, receivedHash);
 	}
-	
+
 	/**
 	 * Prepends a given message with a new HMAC
 	 * @param message
@@ -193,23 +199,46 @@ public class ClientHandler implements Runnable {
 									}
 									else{
 										nrOfOperations++;
+
 										Socket socket = new Socket(node.getAddress(),node.getTcpPort());
-										PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-										BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-										String message = prependRequestWithHMAC("!compute "+result +" " +parts[i-1]+" "+parts[i]);
-										out.println(message);
-										result = in.readLine();
-										String[] splittedResult = result.split("\\s+");
-										String plaintext = "";
-										for(int j = 1; j<splittedResult.length; j++){
-											plaintext = plaintext + splittedResult[j]+" ";
+
+										//PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+										//BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+										String message = "!compute "+result +" " +parts[i-1]+" "+parts[i];
+
+										//result = in.readLine();
+										try{
+											
+											Channel tcpC = new TcpChannel(socket);
+											Channel hC = null;
+
+											hC = new HmacChannel(tcpC,cloudController.getSecret());
+
+
+											hC.write(message.getBytes());	
+											result = new String(hC.read());
 										}
-										result = plaintext.trim();
-										if(!HMACsAreEqual(splittedResult[0],result)||splittedResult[1].equals("!tampered")){
+										catch(IntegrityException e){
 											result = "Incorrect Hash";
 											nrOfOperations = 0;
 											break;
+										} catch (InvalidKeyException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										} catch (NoSuchAlgorithmException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
 										}
+										catch (IOException e){
+											e.printStackTrace();
+										}
+
+
+										/*if(!HMACsAreEqual(splittedResult[0],result)||splittedResult[1].equals("!tampered")){
+											result = "Incorrect Hash";
+											nrOfOperations = 0;
+											break;
+										}*/
 										if(result.contains("Error: division by 0")){
 											break;
 										}
@@ -232,7 +261,9 @@ public class ClientHandler implements Runnable {
 									node.setStatus(false);
 								}
 								catch (UnknownHostException e) {} 
-								catch (IOException e) {}
+								catch (IOException e) {
+									e.printStackTrace();
+								}
 							}
 							cloudController.modifyCredits(position, -50*nrOfOperations);
 							nrOfOperations = 0;

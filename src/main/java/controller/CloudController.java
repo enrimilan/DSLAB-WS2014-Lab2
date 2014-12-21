@@ -350,6 +350,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		}
 	}
 	
+	public String getSecret(){
+		return config.getString("hmac.key");
+	}
+	
 	/**
 	 * @return a list with the currently online nodes.
 	 */
