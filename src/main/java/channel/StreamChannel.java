@@ -16,8 +16,7 @@ public class StreamChannel implements Channel {
 	
 	@Override
 	public void write(byte[] message) {
-		out.print(message);
-		out.println();
+		out.println(new String(message));
 	}
 
 	@Override
