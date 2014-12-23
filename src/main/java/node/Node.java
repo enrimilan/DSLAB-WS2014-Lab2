@@ -42,7 +42,6 @@ public class Node implements INodeCli, Runnable {
 	private int nodeRmin;
 	private int resourceLevel;
 	private int newResourceLevel;
-	private Mac hMac;
 	private Shell shell;
 	private AlivePacketSender alivePacketSender;
 	private Listener listener;
@@ -83,12 +82,6 @@ public class Node implements INodeCli, Runnable {
 		nodeRmin = config.getInt("node.rmin");
 		resourceLevel = 0;
 		newResourceLevel = 0;
-		try {
-			generateHMAC(config.getString("hmac.key"));
-		} 
-		catch (InvalidKeyException e) {} 
-		catch (NoSuchAlgorithmException e) {} 
-		catch (IOException e) {}
 	}
 
 	/**
@@ -138,7 +131,7 @@ public class Node implements INodeCli, Runnable {
 		catch (UnsupportedEncodingException e) {} 
 		catch (IOException e) {}
 	}
-	
+
 	/**
 	 * Sets a new temporary resource level, which will possibly be the true resource level in case of a successful Two-Phase commit.
 	 * @param resourceLevel the new resource level
@@ -169,31 +162,10 @@ public class Node implements INodeCli, Runnable {
 		return nodeRmin;
 	}
 
-	/**
-	 * Generates the HMAC for this node
-	 * @param hMacKeyDir the directory of hmac.key
-	 * @throws IOException
-	 * @throws InvalidKeyException
-	 * @throws NoSuchAlgorithmException
-	 */
-	private void generateHMAC(String hMacKeyDir) throws IOException, InvalidKeyException, NoSuchAlgorithmException{
-		FileInputStream fis = new FileInputStream(hMacKeyDir);
-		byte[] key = new byte[2048];
-		fis.read(key);
-		fis.close();
-		Key secretKey = new SecretKeySpec(key,"HmacSHA256");
-		hMac = Mac.getInstance("HmacSHA256");
-		hMac.init(secretKey);
-	}
-
-	public Mac getHMAC(){
-		return hMac;
-	}
-	
 	public String getSecret() {
 		return config.getString("hmac.key");
 	}
-	
+
 	/**
 	 * @return all the log files of this node as a list of DTOs
 	 * @throws IOException
