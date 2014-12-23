@@ -8,7 +8,6 @@ import util.Config;
 
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -59,9 +58,6 @@ public class AdminConsole implements IAdminConsole, Runnable {
 
 	/**
 	 * Gets the reference to the AdminService component.
-	 * @throws NotBoundException 
-	 * @throws RemoteException 
-	 * @throws AccessException 
 	 */
 	private void getReferenceToTheRemoteObject(){
 		Registry registry = null;
