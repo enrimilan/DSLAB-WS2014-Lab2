@@ -8,14 +8,20 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import model.ComputationRequestInfo;
 
 import org.bouncycastle.util.encoders.Base64;
+
+import util.Config;
 
 /**
  * Listens for requests. In case of !compute request, if the calculation is successful, the resulting number is sent back to the cloud controller. 
@@ -36,7 +42,19 @@ public class Listener implements Runnable {
 		this.node = node;
 		this.tcpPort = tcpPort;
 		this.nodeRmin = nodeRmin;
-		this.hMac = node.getHMAC();
+		String secret = new Config("controller").getString("hmac.key");
+		Key secretKey = new SecretKeySpec(secret.getBytes(),"HmacSHA256");
+		try {
+			hMac = Mac.getInstance("HmacSHA256");
+			hMac.init(secretKey);
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 
 	/**
