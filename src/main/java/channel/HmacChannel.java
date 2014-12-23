@@ -17,7 +17,6 @@ public class HmacChannel extends ChannelDecorator {
 
 	public HmacChannel(Channel channel, String secret) throws NoSuchAlgorithmException, InvalidKeyException {
 		super(channel);
-		
 		Key secretKey = new SecretKeySpec(secret.getBytes(),"HmacSHA256");
 		hMac = Mac.getInstance("HmacSHA256");
 		hMac.init(secretKey);
@@ -39,7 +38,7 @@ public class HmacChannel extends ChannelDecorator {
 		hmacmsg[hl] = (byte) s;
 		System.arraycopy(message, 0, hmacmsg, hl+1, ml);
 		
-		System.out.println(new String(hmacmsg)); // TODO: remove
+		//System.out.println(new String(hmacmsg)); // TODO: remove
 		
 		channel.write(hmacmsg);
 	}
@@ -64,6 +63,11 @@ public class HmacChannel extends ChannelDecorator {
 			return plaintext.getBytes();
 		else
 			throw new IntegrityException("!tampered");
+	}
+
+	@Override
+	public void close() throws IOException {
+		channel.close();
 	}
 
 }

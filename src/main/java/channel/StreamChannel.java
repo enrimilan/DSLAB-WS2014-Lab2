@@ -24,6 +24,12 @@ public class StreamChannel implements Channel {
 		return in.readLine().getBytes();
 	}
 	
+	@Override
+	public void close() throws IOException{
+		if(out != null) out.close();
+		if(in != null) in.close();
+	}
+	
 	public void writeString(String message) {
 		out.println(message);
 	}

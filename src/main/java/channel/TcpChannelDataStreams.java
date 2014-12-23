@@ -26,4 +26,10 @@ public class TcpChannelDataStreams implements Channel {
 		return iochannel.read();
 	}
 
+	@Override
+	public void close() throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

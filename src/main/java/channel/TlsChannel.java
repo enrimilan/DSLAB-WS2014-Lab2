@@ -21,4 +21,10 @@ public class TlsChannel extends ChannelDecorator {
 		return null;
 	}
 
+	@Override
+	public void close() throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

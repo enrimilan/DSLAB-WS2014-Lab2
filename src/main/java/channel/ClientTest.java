@@ -3,6 +3,10 @@ package channel;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+
+import util.Config;
 
 public class ClientTest implements Runnable {
 
@@ -10,21 +14,9 @@ public class ClientTest implements Runnable {
 	public void run() {
 		try {
 			Socket socket = new Socket("localhost",5678);
-			Channel c = new TcpChannel(socket);
-			String request = "haha du pappnase!";
+			Channel c = new HmacChannel(new TcpChannel(socket),new Config("controller").getString("hmac.key"));
+			String request = "!compute 2 * 2";
 			c.write(request.getBytes());
-			String response = new String(c.read());
-			System.out.println(response);
-			socket.close();
-
-			Thread.sleep(3000);
-			//and now with datastreams
-			socket = new Socket("localhost",5678);
-			c = new TcpChannelDataStreams(socket);
-			request = "haha du pappnase!";
-			c.write(request.getBytes());
-			response = new String(c.read());
-			System.out.println(response);
 			socket.close();
 
 		} catch (UnknownHostException e) {
@@ -33,7 +25,10 @@ public class ClientTest implements Runnable {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (InterruptedException e) {
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

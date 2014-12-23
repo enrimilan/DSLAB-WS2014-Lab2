@@ -19,4 +19,10 @@ public class Base64Channel extends ChannelDecorator {
 	public byte[] read() throws IOException {
 		return Base64.decode(channel.read());
 	}
+
+	@Override
+	public void close() throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
 }

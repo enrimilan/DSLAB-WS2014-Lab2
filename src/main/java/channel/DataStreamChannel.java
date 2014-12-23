@@ -32,4 +32,10 @@ public class DataStreamChannel implements Channel {
 		in.readFully(message, 0, message.length); // read the message
 		return message;
 	}
+
+	@Override
+	public void close() throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
 }
