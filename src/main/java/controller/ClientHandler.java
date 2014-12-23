@@ -1,20 +1,12 @@
 package controller;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-import javax.crypto.Mac;
-
-import org.bouncycastle.util.encoders.Base64;
 
 import channel.Channel;
 import channel.HmacChannel;
@@ -27,16 +19,14 @@ public class ClientHandler implements Runnable {
 	private boolean running = true;
 	private Socket clientSocket;
 	private CloudController cloudController;
-	private PrintWriter out;
-	private BufferedReader in;
 	private boolean loggedIn = false;
 	private int position = -1;
-	private Mac hMac;
+	private TcpChannel tcpChannel;
 
-	public ClientHandler(Socket clientSocket, CloudController cloudController){
+	public ClientHandler(Socket clientSocket, CloudController cloudController) throws IOException, InvalidKeyException, NoSuchAlgorithmException{
 		this.clientSocket = clientSocket;
+		this.tcpChannel = new TcpChannel(clientSocket);
 		this.cloudController = cloudController;
-		this.hMac = cloudController.getHMAC();
 	}
 
 	/**
@@ -51,33 +41,7 @@ public class ClientHandler implements Runnable {
 			position = -1;
 		}
 		if(clientSocket != null) clientSocket.close();
-		if(in != null) in.close();
-		if(out != null) out.close();
-	}
-
-	/**
-	 * Checks whether the HMAC of the received plaintext is equal to the HMAC that was sent by the communication partner
-	 * @param receivedHMAC
-	 * @param receivedPlainText
-	 * @return true, if the HMACs are equal
-	 */
-	private boolean HMACsAreEqual(String receivedHMAC, String receivedPlaintext){
-		// computedHash is the HMAC of the received plaintext 
-		hMac.update(receivedPlaintext.getBytes());
-		byte[] computedHash = hMac.doFinal();
-		// receivedHash is the HMAC that was sent by the communication partner
-		byte[] receivedHash = Base64.decode(receivedHMAC.getBytes());
-		return MessageDigest.isEqual(computedHash, receivedHash);
-	}
-
-	/**
-	 * Prepends a given message with a new HMAC
-	 * @param message
-	 * @return the message with the HMAC prepended
-	 */
-	private String prependRequestWithHMAC(String message){
-		hMac.update(message.getBytes());
-		return new String(Base64.encode(hMac.doFinal())) +" " + message;
+		tcpChannel.close();
 	}
 
 	/**
@@ -87,23 +51,21 @@ public class ClientHandler implements Runnable {
 	public void run() {
 		try {
 			while(running){
-				out = new PrintWriter(clientSocket.getOutputStream(), true);
-				in = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()));
 				String request="";
 				String response="";
-				while ((request = in.readLine()) != null) {
-					String[] parts = request.split("\\s+");
+				while ((request = tcpChannel.readString()) != null) {
+					String[] partsOfTheRequest = request.split("\\s+");
 
 					//handle !login request
-					if(parts[0].equals("!login")){
-						if(parts.length != 3){
+					if(partsOfTheRequest[0].equals("!login")){
+						if(partsOfTheRequest.length != 3){
 							response ="Too many parameters!";
 						}
 						else if(loggedIn){
 							response = "You are already logged in!";
 						}
 						else{
-							position = cloudController.setUserOnline(parts[1], parts[2]);
+							position = cloudController.setUserOnline(partsOfTheRequest[1], partsOfTheRequest[2]);
 							if(position !=-1 && position != -2){
 								loggedIn = true;
 								response = "Successfully logged in.";
@@ -118,8 +80,8 @@ public class ClientHandler implements Runnable {
 					}
 
 					//handle !logout request
-					else if(parts[0].equals("!logout")){
-						if(parts.length != 1){
+					else if(partsOfTheRequest[0].equals("!logout")){
+						if(partsOfTheRequest.length != 1){
 							response ="No parameters allowed!";
 						}
 						else if(!loggedIn){
@@ -135,8 +97,8 @@ public class ClientHandler implements Runnable {
 					}
 
 					//handle !credits request
-					else if(parts[0].equals("!credits")){
-						if(parts.length != 1){
+					else if(partsOfTheRequest[0].equals("!credits")){
+						if(partsOfTheRequest.length != 1){
 							response ="No parameters allowed!";
 						}
 						else if(!loggedIn){
@@ -148,24 +110,24 @@ public class ClientHandler implements Runnable {
 					}
 
 					//handle !buy request
-					else if(parts[0].equals("!buy")){
-						if(parts.length != 2){
+					else if(partsOfTheRequest[0].equals("!buy")){
+						if(partsOfTheRequest.length != 2){
 							response ="Too many parameters!!";
 						}
 						else if(!loggedIn){
 							response = "You are not logged in!";
 						}
-						else if(Long.valueOf(parts[1]).longValue()<=0){
+						else if(Long.valueOf(partsOfTheRequest[1]).longValue()<=0){
 							response = "The amount of credits should be greater than 0!";
 						}
 						else{
-							response = "You now have "+cloudController.modifyCredits(position,Long.valueOf(parts[1]).longValue())+ " credits.";
+							response = "You now have "+cloudController.modifyCredits(position,Long.valueOf(partsOfTheRequest[1]).longValue())+ " credits.";
 						}
 					}
 
 					//handle !list request
-					else if(parts[0].equals("!list")){
-						if(parts.length != 1){
+					else if(partsOfTheRequest[0].equals("!list")){
+						if(partsOfTheRequest.length != 1){
 							response ="Too many parameters!!";
 						}
 						else if(!loggedIn){
@@ -177,20 +139,20 @@ public class ClientHandler implements Runnable {
 					}
 
 					//handle !compute request
-					else if(parts[0].equals("!compute")){
+					else if(partsOfTheRequest[0].equals("!compute")){
 						cloudController.increaseStatistics(request);
 						if(!loggedIn){
 							response = "You are not logged in!";
 						}
-						else if(((parts.length - 2)/2)*50>cloudController.getCredits(position)){
+						else if(((partsOfTheRequest.length - 2)/2)*50>cloudController.getCredits(position)){
 							response = "You don't have enough credits to perform this operation.";
 						}
 						else{
-							String result = parts[1]; //first operand
+							String result = partsOfTheRequest[1]; //first operand
 							int i = 3;
 							int nrOfOperations = 0;
-							while(i<parts.length){
-								NodeInfo node = cloudController.getNodeWithLowestUsage(parts[i-1]);
+							while(i<partsOfTheRequest.length){
+								NodeInfo node = cloudController.getNodeWithLowestUsage(partsOfTheRequest[i-1]);
 								try {
 									if(node == null){
 										result = "No nodes available for at least one operation.";
@@ -199,22 +161,10 @@ public class ClientHandler implements Runnable {
 									}
 									else{
 										nrOfOperations++;
-
 										Socket socket = new Socket(node.getAddress(),node.getTcpPort());
-
-										//PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-										//BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-										String message = "!compute "+result +" " +parts[i-1]+" "+parts[i];
-
-										//result = in.readLine();
+										String message = "!compute "+result +" " +partsOfTheRequest[i-1]+" "+partsOfTheRequest[i];
 										try{
-											
-											Channel tcpC = new TcpChannel(socket);
-											Channel hC = null;
-
-											hC = new HmacChannel(tcpC,cloudController.getSecret());
-
-
+											Channel hC = new HmacChannel(new TcpChannel(socket),cloudController.getSecret());
 											hC.write(message.getBytes());	
 											result = new String(hC.read());
 										}
@@ -233,12 +183,6 @@ public class ClientHandler implements Runnable {
 											e.printStackTrace();
 										}
 
-
-										/*if(!HMACsAreEqual(splittedResult[0],result)||splittedResult[1].equals("!tampered")){
-											result = "Incorrect Hash";
-											nrOfOperations = 0;
-											break;
-										}*/
 										if(result.contains("Error: division by 0")){
 											break;
 										}
@@ -270,7 +214,7 @@ public class ClientHandler implements Runnable {
 							response = result;
 						}
 					}
-					out.println(response);
+					tcpChannel.writeString(response);
 				}
 			}
 			stopRunning();
