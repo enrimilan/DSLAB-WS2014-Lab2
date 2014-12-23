@@ -8,6 +8,7 @@ import util.Config;
 
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -58,17 +59,21 @@ public class AdminConsole implements IAdminConsole, Runnable {
 
 	/**
 	 * Gets the reference to the AdminService component.
+	 * @throws NotBoundException 
+	 * @throws RemoteException 
+	 * @throws AccessException 
 	 */
 	private void getReferenceToTheRemoteObject(){
+		Registry registry = null;
 		try{
 			// obtain registry that was created by the server
-			Registry registry = LocateRegistry.getRegistry(controllerHost,controllerRmiPort);
+			registry = LocateRegistry.getRegistry(controllerHost,controllerRmiPort);
 			// look for the bound server remote-object implementing the IServer interface
 			adminService = (IAdminConsole) registry.lookup(bindingName);
 		} catch (RemoteException e) {
-			throw new RuntimeException("Error while obtaining registry/server-remote-object.", e);
+			System.err.println("Error while obtaining registry/AdminService-remote-object.");
 		} catch (NotBoundException e) {
-			throw new RuntimeException("Error while looking for server-remote-object.", e);
+			System.err.println("Error while looking for AdminService-remote-object.");
 		}
 	}
 
@@ -77,7 +82,6 @@ public class AdminConsole implements IAdminConsole, Runnable {
 	 */
 	private void startShell(){
 		shell.register(this);
-		getReferenceToTheRemoteObject();
 		new Thread(shell).start();
 	}
 
@@ -87,9 +91,10 @@ public class AdminConsole implements IAdminConsole, Runnable {
 	@Override
 	public void run() {
 		readAdminProperties();
+		getReferenceToTheRemoteObject();
 		startShell();
 	}
-	
+
 	@Command(value="subscribe")
 	public String subscribe(String username, int credits) throws RemoteException{
 		boolean subscribed = subscribe(username, credits, new NotificationCallback());
@@ -100,18 +105,18 @@ public class AdminConsole implements IAdminConsole, Runnable {
 			return "Could not subscribe: you have already subsribed or this user does not exist or credits are less than 1";
 		}
 	}
-	
+
 	@Override
 	public boolean subscribe(String username, int credits, INotificationCallback callback) throws RemoteException {
 		return adminService.subscribe(username, credits, callback);
 	}
-	
+
 	@Command(value="getLogs")
 	@Override
 	public List<ComputationRequestInfo> getLogs() throws RemoteException {
 		return adminService.getLogs();
 	}
-	
+
 	@Command(value="statistics")
 	@Override
 	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
