@@ -10,11 +10,11 @@ public abstract class ChannelDecorator implements Channel {
 		this.channel = channel;
 	}
 	
-	public void setChannel(Channel channel) {
+	public final void setChannel(Channel channel) {
 		this.channel = channel;
 	}
 	
-	public Channel getChannel() {
+	public final Channel getChannel() {
 		return this.channel;
 	}
 	
