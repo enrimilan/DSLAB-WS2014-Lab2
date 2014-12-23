@@ -18,6 +18,14 @@ public abstract class ChannelDecorator implements Channel {
 		return this.channel;
 	}
 	
+	public void writeString(String message) {
+		write(message.getBytes());
+	}
+	
+	public String readString() throws IOException {
+		return new String(read());
+	}
+	
 	public abstract void write(byte[] message);
 
 	public abstract byte[] read() throws IOException;
