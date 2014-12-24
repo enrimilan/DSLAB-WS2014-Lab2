@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.rmi.AccessException;
 import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -42,9 +43,10 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 			registerRemoteObject();
 		} 
 		catch (RemoteException e) {
-			throw new RuntimeException("Error while starting server.", e);
-		} catch (AlreadyBoundException e) {
-			throw new RuntimeException("Error while binding remote object to registry.", e);
+			System.err.println("Error while starting AdminService.");
+		} 
+		catch (AlreadyBoundException e) {
+			System.err.println("Error while binding remote object to registry. Object alreasy bound.");
 		}
 	}
 
@@ -69,7 +71,7 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 		registry = LocateRegistry.createRegistry(controllerRmiPort);
 		registry.bind(bindingName, this);
 	}
-	
+
 	@Override
 	public boolean subscribe(String username, int credits, INotificationCallback callback) throws RemoteException {
 		return cloudController.subscribe(username,credits,callback);
@@ -93,10 +95,10 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 				}
 			} 
 			catch (IOException e) {
-				out.close();
 				try {
 					socket.close();
 					in.close();
+					out.close();
 				} catch (IOException e1) {}
 			} 
 			catch (ClassNotFoundException e) {}
@@ -135,10 +137,10 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 		}
 		return sortedMap;
 	}
-	
+
 	/**
 	 * @param map
-	 * @return the character with the greatest number of occurrences
+	 * @return the character(operator) with the greatest number of occurrences
 	 */
 	private Character getCharWithMaxValue(LinkedHashMap<Character, Long> map){
 		long max = 0;
@@ -172,6 +174,19 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 	public void setUserPublicKey(String username, byte[] key)
 			throws RemoteException {
 		// We don't have to implement this method.
-
+	}
+	
+	/**
+	 * Unbind and exit the AdminService.
+	 */
+	public void close() {
+		try {
+			registry.unbind(bindingName);
+			UnicastRemoteObject.unexportObject(this,true);
+		} catch (RemoteException e) {
+			System.err.println("Unbind error.");
+		} catch (NotBoundException e) {
+			System.err.println("Unbind error.");
+		}
 	}
 }
