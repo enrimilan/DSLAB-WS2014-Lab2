@@ -8,7 +8,7 @@ import java.net.Socket;
 
 public class TcpChannel implements Channel {
 	
-	private Channel iochannel;
+	private StreamChannel iochannel;
 
 	public TcpChannel(Socket socket) throws IOException {
 		PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -25,6 +25,19 @@ public class TcpChannel implements Channel {
 	@Override
 	public byte[] read() throws IOException {
 		return iochannel.read();
+	}
+	
+	@Override
+	public void close() throws IOException{
+		iochannel.close();
+	}
+	
+	public void writeString(String message){
+		iochannel.writeString(message);
+	}
+	
+	public String readString() throws IOException{
+		return iochannel.readString();
 	}
 
 }
