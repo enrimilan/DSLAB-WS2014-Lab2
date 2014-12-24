@@ -418,6 +418,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		nodeListener.stopRunning();
 		nodeIsAliveChecker.stopRunning();
 		executor.shutdown();
+		adminService.close();
 		return "Shutting down "+componentName+" now.";
 	}
 
