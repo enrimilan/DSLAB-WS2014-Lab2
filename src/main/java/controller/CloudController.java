@@ -3,24 +3,17 @@ package controller;
 import util.Config;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.rmi.RemoteException;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 
 import admin.INotificationCallback;
 import model.NodeInfo;
@@ -37,7 +30,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private int nodeTimeout;
 	private int nodeCheckPeriod;
 	private int controllerRmax;
-	private Mac hMac;
 	private ArrayList<UserInfo> users;
 	private CopyOnWriteArrayList<NodeInfo> nodes;
 	private LinkedHashMap<Character, Long> statistics;
@@ -81,12 +73,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		nodeTimeout = config.getInt("node.timeout");
 		nodeCheckPeriod = config.getInt("node.checkPeriod");
 		controllerRmax = config.getInt("controller.rmax");
-		try {
-			generateHMAC(config.getString("hmac.key"));
-		} 
-		catch (InvalidKeyException e) {} 
-		catch (NoSuchAlgorithmException e) {} 
-		catch (IOException e) {}
 	}
 
 	/**
@@ -304,27 +290,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		return infos;
 	}
 
-	/**
-	 * Generates the HMAC for this cloud
-	 * @param hMacKeyDir the directory of hmac.key
-	 * @throws IOException
-	 * @throws InvalidKeyException
-	 * @throws NoSuchAlgorithmException
-	 */
-	private void generateHMAC(String hMacKeyDir) throws IOException, InvalidKeyException, NoSuchAlgorithmException{
-		FileInputStream fis = new FileInputStream(hMacKeyDir);
-		byte[] key = new byte[2048];
-		fis.read(key);
-		fis.close();
-		Key secretKey = new SecretKeySpec(key,"HmacSHA256");
-		hMac = Mac.getInstance("HmacSHA256");
-		hMac.init(secretKey);
-	}
-
-	public Mac getHMAC(){
-		return hMac;
-	}
-
 	public synchronized LinkedHashMap<Character, Long> getStatistics(){
 		return statistics;
 	}
@@ -348,6 +313,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				statistics.put('/', statistics.get('/') + 1);
 			}
 		}
+	}
+	
+	public String getSecret(){
+		return config.getString("hmac.key");
 	}
 	
 	/**
