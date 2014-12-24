@@ -12,7 +12,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.util.encoders.Base64;
 
 public class HmacChannel extends ChannelDecorator {
-
+	
 	private Mac hMac;
 
 	public HmacChannel(Channel channel, String secret) throws NoSuchAlgorithmException, InvalidKeyException {
@@ -24,20 +24,30 @@ public class HmacChannel extends ChannelDecorator {
 
 	@Override
 	public void write(byte[] message) {
-
-		hMac.update(message);
+		byte[] tmp = message;
+		hMac.update(tmp);
 		byte[] hash = Base64.encode(hMac.doFinal());
-
-		String hmacmsg = new String(hash) + " " + message;
-
-		channel.write(hmacmsg.getBytes());
+		
+		int ml = message.length;
+		int hl = hash.length;
+		int al = hash.length + message.length + 1;
+		char s = ' ';
+		
+		byte[] hmacmsg = new byte[al];
+		System.arraycopy(hash, 0, hmacmsg, 0, hl);
+		hmacmsg[hl] = (byte) s;
+		System.arraycopy(message, 0, hmacmsg, hl+1, ml);
+		
+		//System.out.println(new String(hmacmsg)); // TODO: remove
+		
+		channel.write(hmacmsg);
 	}
 
 	@Override
 	public byte[] read() throws IOException {
-
+		
 		byte[] received = channel.read();
-
+		
 		String[] splittedResult = new String (received).split("\\s+");
 		byte[] receivedHash = Base64.decode(splittedResult[0].getBytes());
 		String plaintext = "";
@@ -45,10 +55,10 @@ public class HmacChannel extends ChannelDecorator {
 			plaintext += splittedResult[j]+" ";
 		}
 		plaintext = plaintext.trim();
-
+		
 		hMac.update(plaintext.getBytes());
 		byte[] computedHash = hMac.doFinal();
-
+		
 		if (MessageDigest.isEqual(computedHash, receivedHash))
 			return plaintext.getBytes();
 		else

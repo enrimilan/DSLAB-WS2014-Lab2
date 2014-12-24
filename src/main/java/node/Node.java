@@ -5,7 +5,6 @@ import util.Config;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -13,17 +12,11 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 
 import model.ComputationRequestInfo;
 import cli.Command;
@@ -42,7 +35,6 @@ public class Node implements INodeCli, Runnable {
 	private int nodeRmin;
 	private int resourceLevel;
 	private int newResourceLevel;
-	private Mac hMac;
 	private Shell shell;
 	private AlivePacketSender alivePacketSender;
 	private Listener listener;
@@ -83,12 +75,6 @@ public class Node implements INodeCli, Runnable {
 		nodeRmin = config.getInt("node.rmin");
 		resourceLevel = 0;
 		newResourceLevel = 0;
-		try {
-			generateHMAC(config.getString("hmac.key"));
-		} 
-		catch (InvalidKeyException e) {} 
-		catch (NoSuchAlgorithmException e) {} 
-		catch (IOException e) {}
 	}
 
 	/**
@@ -169,25 +155,8 @@ public class Node implements INodeCli, Runnable {
 		return nodeRmin;
 	}
 
-	/**
-	 * Generates the HMAC for this node
-	 * @param hMacKeyDir the directory of hmac.key
-	 * @throws IOException
-	 * @throws InvalidKeyException
-	 * @throws NoSuchAlgorithmException
-	 */
-	private void generateHMAC(String hMacKeyDir) throws IOException, InvalidKeyException, NoSuchAlgorithmException{
-		FileInputStream fis = new FileInputStream(hMacKeyDir);
-		byte[] key = new byte[2048];
-		fis.read(key);
-		fis.close();
-		Key secretKey = new SecretKeySpec(key,"HmacSHA256");
-		hMac = Mac.getInstance("HmacSHA256");
-		hMac.init(secretKey);
-	}
-
-	public Mac getHMAC(){
-		return hMac;
+	public String getSecret(){
+		return new Config(componentName).getString("hmac.key");
 	}
 	
 	/**
