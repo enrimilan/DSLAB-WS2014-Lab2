@@ -1,11 +1,10 @@
 package node;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
+
+import channel.TcpChannel;
 
 public class MessageSenderForTwoPhaseCommit implements Runnable {
 
@@ -29,16 +28,16 @@ public class MessageSenderForTwoPhaseCommit implements Runnable {
 		Socket socket = null;
 		try {
 			socket = new Socket(host,tcpPort);
-			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-			BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			out.println(message);
+			TcpChannel tcpChannel = new TcpChannel(socket);
+			tcpChannel.writeString(message);
 			if(message.startsWith("!share")){
-				String response = in.readLine();
+				String response = tcpChannel.readString();
 				if(response.equals("!nok")){
 					aps.disagree();
 				}
 			}
 			socket.close();
+			tcpChannel.close();
 		} 
 		catch (UnknownHostException e) {} 
 		catch (IOException e) {}

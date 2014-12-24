@@ -1,16 +1,15 @@
 package client;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
+import channel.Channel;
+import channel.TcpChannel;
 import cli.Command;
 import cli.Shell;
 import util.Config;
@@ -23,8 +22,7 @@ public class Client implements IClientCli, Runnable {
 	private int controllerTcpPort;
 	private Shell shell;
 	private Socket socket;
-	private PrintWriter out;
-	private BufferedReader in;	
+	private Channel tcpChannel;
 
 	/**
 	 * @param componentName
@@ -58,8 +56,7 @@ public class Client implements IClientCli, Runnable {
 	private void connectToCloudControllerAndStartShell(){
 		try {
 			socket = new Socket(controllerHost,controllerTcpPort);
-			out = new PrintWriter(socket.getOutputStream(), true);
-			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			this.tcpChannel = new TcpChannel(socket);
 			startShell();
 		}
 		catch(ConnectException e) {
@@ -87,10 +84,10 @@ public class Client implements IClientCli, Runnable {
 	 * @throws IOException
 	 */
 	private String sendRequest(String request) throws IOException{
-		out.println(request);
+		((TcpChannel) tcpChannel).writeString(request);
 		String response = "";
 		try{
-			response = in.readLine();
+			response = ((TcpChannel) tcpChannel).readString();
 			if(response == null){
 				//this check was necessary when running the code on a linux machine
 				close();
@@ -112,8 +109,7 @@ public class Client implements IClientCli, Runnable {
 	private void close() throws IOException{
 		shell.close();
 		if(socket != null) socket.close();
-		if(out != null) out.close();
-		if(in != null) in.close();
+		tcpChannel.close();
 	}
 	
 	/**
