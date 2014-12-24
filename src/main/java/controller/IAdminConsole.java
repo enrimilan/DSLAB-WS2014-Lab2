@@ -9,11 +9,6 @@ import java.security.Key;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-/**
- * Please note that this interface is not needed for Lab 1, but will
- * later be used in Lab 2. Hence, you do not have to implement it for the
- * first submission.
- */
 public interface IAdminConsole extends Remote {
 	/**
 	 * Registers the given {@link INotificationCallback} to be invoked if the
