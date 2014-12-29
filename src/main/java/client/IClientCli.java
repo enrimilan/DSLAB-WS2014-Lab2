@@ -2,6 +2,8 @@ package client;
 
 import java.io.IOException;
 
+import channel.AESEncryptedChannel;
+
 public interface IClientCli {
 
 	// --- Commands needed for Lab 1 ---
@@ -24,8 +26,8 @@ public interface IClientCli {
 	 * @throws IOException
 	 *             if an I/O error occurs
 	 */
-	String login(String username, String password) throws IOException;
-
+	//String login(String username, String password) throws IOException;
+	String login(String username) throws IOException;
 	/**
 	 * Performs a logout if necessary and closes open connections between client
 	 * and cloud controller.

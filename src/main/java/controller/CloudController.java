@@ -40,6 +40,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private AdminService adminService;
 	private ExecutorService executor;
 
+	
 	/**
 	 * @param componentName
 	 *            the name of the component - represented in the prompt
@@ -151,9 +152,9 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 * @param password
 	 * @return the position on the list of a user, if this user wasn't online, -2 if he was already online or -1 if this user doesn't exist(username or password wrong).
 	 */
-	public synchronized int setUserOnline(String username, String password){
+	public synchronized int setUserOnline(String username){
 		for(UserInfo u : users){
-			if(u.getUsername().equals(username)&&u.getPassword().equals(password)){
+			if(u.getUsername().equals(username)){
 				if(!u.isOnline()){
 					u.setStatus(true);
 					return users.indexOf(u);
@@ -165,6 +166,21 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		}
 		return -1;
 	}
+	
+//	public synchronized int setUserOnline(String username, String password){
+//		for(UserInfo u : users){
+//			if(u.getUsername().equals(username)&&u.getPassword().equals(password)){
+//				if(!u.isOnline()){
+//					u.setStatus(true);
+//					return users.indexOf(u);
+//				}
+//				else{
+//					return -2;
+//				}
+//			}
+//		}
+//		return -1;
+//	}
 
 	/**
 	 * Sets the users status to offline.
@@ -420,6 +436,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		executor.shutdown();
 		adminService.close();
 		return "Shutting down "+componentName+" now.";
+	}
+	
+	public Config getConfig (){
+		return this.config;
 	}
 
 	/**

@@ -23,6 +23,5 @@ public class Base64Channel extends ChannelDecorator {
 	@Override
 	public void close() throws IOException {
 		channel.close();
-		
 	}
 }
