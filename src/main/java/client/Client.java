@@ -32,6 +32,7 @@ public class Client implements IClientCli, Runnable {
 	private Shell shell;
 	private Socket socket;
 	private Channel tcpChannel;
+	private boolean authenticated = false;
 
 	private AESEncryptedChannel aesEncryptedChannel;
 	private PublicKey sendKey;
@@ -100,6 +101,11 @@ public class Client implements IClientCli, Runnable {
 	 */
 	
 	private String sendRequest(String request) throws IOException{
+		
+		if(!authenticated){
+			return "You are not authenticated!";
+		}
+		
 		try {
 			aesEncryptedChannel.send(request);
 		} catch (BadPaddingException e1) {
@@ -162,24 +168,10 @@ public class Client implements IClientCli, Runnable {
 		connectToCloudControllerAndStartShell();
 	}
 
-	@Command(value="authenticate")
+	@Command(value="login")
 	@Override
-	public String login(String username) throws IOException {
-		
-		sendKey = Keys.readPublicPEM(new File(config.getString("controller.key")));
-	    receiveKey = Keys.readPrivatePEM(new File("keys/client/"+username+".pem"));
-	    clientAuthenticator = new ClientAuthenticator(username);
-		RSAEncryptedChannel rsaEncryptedChannel = new RSAEncryptedChannel((TcpChannel)tcpChannel, sendKey, receiveKey);
-	
-		try {
-			aesEncryptedChannel = clientAuthenticator.rsaAuthenticate(rsaEncryptedChannel,sendKey, receiveKey);
-		
-		} catch (BadPaddingException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
-		return aesEncryptedChannel.receive(); //sendRequest("!authenticate "+ username);
+	public String login(String username, String password) throws IOException {
+		return "This command is not supported anymore. Please use the !authenticate command instead.";
 	}
 
 	@Command(value="logout")
@@ -228,14 +220,24 @@ public class Client implements IClientCli, Runnable {
 		Client client = new Client(args[0], new Config("client"), System.in, System.out);
 		client.run();
 	}
-
-	// --- Commands needed for Lab 2. Please note that you do not have to
-	// implement them for the first submission. ---
-
+	
+	@Command(value="authenticate")
 	@Override
 	public String authenticate(String username) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		sendKey = Keys.readPublicPEM(new File(config.getString("controller.key")));
+	    receiveKey = Keys.readPrivatePEM(new File("keys/client/"+username+".pem"));
+	    clientAuthenticator = new ClientAuthenticator(username);
+		RSAEncryptedChannel rsaEncryptedChannel = new RSAEncryptedChannel((TcpChannel)tcpChannel, sendKey, receiveKey);
+	
+		try {
+			aesEncryptedChannel = clientAuthenticator.rsaAuthenticate(rsaEncryptedChannel,sendKey, receiveKey);
+		
+		} catch (BadPaddingException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		authenticated = true;
+		return aesEncryptedChannel.receive(); //sendRequest("!authenticate "+ username);
 	}
 
 }
