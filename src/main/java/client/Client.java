@@ -1,6 +1,7 @@
 package client;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -8,17 +9,23 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.bouncycastle.util.encoders.Base64;
 
 import util.Config;
-import util.Keys;
-import channel.AESEncryptedChannel;
+import channel.AESChannel;
+import channel.Base64Channel;
 import channel.Channel;
-import channel.ClientAuthenticator;
-import channel.RSAEncryptedChannel;
+import channel.RSAChannel;
 import channel.TcpChannel;
 import cli.Command;
 import cli.Shell;
@@ -29,17 +36,13 @@ public class Client implements IClientCli, Runnable {
 	private Config config;
 	private String controllerHost;
 	private int controllerTcpPort;
+	private String controllerKey;
 	private Shell shell;
 	private Socket socket;
 	private Channel tcpChannel;
+	private AESChannel aesChannel;
 	private boolean authenticated = false;
 
-	private AESEncryptedChannel aesEncryptedChannel;
-	private PublicKey sendKey;
-	private PrivateKey receiveKey;
-	private ClientAuthenticator clientAuthenticator;
-	
-	
 	/**
 	 * @param componentName
 	 *            the name of the component - represented in the prompt
@@ -55,15 +58,16 @@ public class Client implements IClientCli, Runnable {
 		this.config = config;
 		this.shell = new Shell(componentName, userRequestStream, userResponseStream);
 	}
-	
+
 	/**
 	 * Reads the host and tcp port of the controller from the client's properties file.
 	 */
 	private void readClientProperties(){
 		controllerHost = config.getString("controller.host");
 		controllerTcpPort = config.getInt("controller.tcp.port");
+		controllerKey = config.getString("controller.key");
 	}
-	
+
 	/**
 	 * Creates a Socket and connects to the cloud controller, also gets the outputstream(for outgoing messages) and the intputstream(for ingoing messages).
 	 * If nothing went wrong i.e the cloud controller is not offline, the shell will be started.
@@ -99,28 +103,23 @@ public class Client implements IClientCli, Runnable {
 	 * 		the response from the cloud controller
 	 * @throws IOException
 	 */
-	
+
 	private String sendRequest(String request) throws IOException{
-		
+
 		if(!authenticated){
 			return "You are not authenticated!";
 		}
-		
-		try {
-			aesEncryptedChannel.send(request);
-		} catch (BadPaddingException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
+
+		aesChannel.write(request.getBytes());
+
 		String response = "";
 		try{
-			response = aesEncryptedChannel.receive();
-			if(response == null){
+			response = new String(aesChannel.read());
+			/*if(response == null){
 				//this check was necessary when running the code on a linux machine
 				close();
 				return "Cloud controller suddenly went offline. Shutting down " +componentName + " now";
-			}
+			}*/
 		}
 		catch (SocketException e){
 			//cloud controller suddenly went offline. make sure to close all the resources in order to exit this client.
@@ -129,26 +128,7 @@ public class Client implements IClientCli, Runnable {
 		}
 		return response;
 	}
-	
-//	private String sendRequest(String request) throws IOException{
-//		((TcpChannel) tcpChannel).writeString(request);
-//		String response = "";
-//		try{
-//			response = ((TcpChannel) tcpChannel).readString();
-//			if(response == null){
-//				//this check was necessary when running the code on a linux machine
-//				close();
-//				return "Cloud controller suddenly went offline. Shutting down " +componentName + " now";
-//			}
-//		}
-//		catch (SocketException e){
-//			//cloud controller suddenly went offline. make sure to close all the resources in order to exit this client.
-//			close();
-//			return "Cloud controller suddenly went offline. Shutting down " +componentName + " now";
-//		}
-//		return response;
-//	}
-	
+
 	/**
 	 * Releases all resources, stops all threads and closes the socket.
 	 * @throws IOException
@@ -158,7 +138,7 @@ public class Client implements IClientCli, Runnable {
 		if(socket != null) socket.close();
 		tcpChannel.close();
 	}
-	
+
 	/**
 	 * Starts the client.
 	 */
@@ -177,7 +157,9 @@ public class Client implements IClientCli, Runnable {
 	@Command(value="logout")
 	@Override
 	public String logout() throws IOException {
-		return sendRequest("!logout");
+		String response = sendRequest("!logout");
+		authenticated = false;
+		return response;
 	}
 
 	@Command(value="credits")
@@ -220,24 +202,51 @@ public class Client implements IClientCli, Runnable {
 		Client client = new Client(args[0], new Config("client"), System.in, System.out);
 		client.run();
 	}
-	
+
 	@Command(value="authenticate")
 	@Override
 	public String authenticate(String username) throws IOException {
-		sendKey = Keys.readPublicPEM(new File(config.getString("controller.key")));
-	    receiveKey = Keys.readPrivatePEM(new File("keys/client/"+username+".pem"));
-	    clientAuthenticator = new ClientAuthenticator(username);
-		RSAEncryptedChannel rsaEncryptedChannel = new RSAEncryptedChannel((TcpChannel)tcpChannel, sendKey, receiveKey);
-	
-		try {
-			aesEncryptedChannel = clientAuthenticator.rsaAuthenticate(rsaEncryptedChannel,sendKey, receiveKey);
-		
-		} catch (BadPaddingException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+		if(authenticated){
+			return "You are already authenticated";
 		}
-		authenticated = true;
-		return aesEncryptedChannel.receive(); //sendRequest("!authenticate "+ username);
+		try {
+			RSAChannel rsaChannel = new RSAChannel(new Base64Channel(tcpChannel), new File("keys/client/"+username+".pem"));
+			rsaChannel.sendFirstMessage(("!authenticate "+username+" ").getBytes(), controllerKey);
+			String[] okMessageParts = (new String(rsaChannel.read())).split("\\s+");
+			if(!Arrays.equals(Base64.decode(okMessageParts[1]),rsaChannel.getChallenge())){
+				return "Challenges not equal!";
+			}
+			byte[] cloudControllerChallenge = Base64.decode(okMessageParts[2].getBytes());
+			byte[] secretKey = Base64.decode(okMessageParts[3].getBytes());
+			byte[] initializationVector = Base64.decode(okMessageParts[4].getBytes());
+			SecretKey key = new SecretKeySpec(secretKey, 0, secretKey.length, "AES");
+			aesChannel = new AESChannel(new Base64Channel(tcpChannel),key,initializationVector);
+			aesChannel.write(cloudControllerChallenge);
+		} 
+		catch(FileNotFoundException e){
+			return "User not found!";
+		}
+		catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalBlockSizeException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String response = new String(aesChannel.read());
+		if(!response.contains("already")){
+			authenticated = true;
+		}
+		return response;
 	}
 
 }

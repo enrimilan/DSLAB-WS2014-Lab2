@@ -30,6 +30,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private int nodeTimeout;
 	private int nodeCheckPeriod;
 	private int controllerRmax;
+	private String key;
 	private ArrayList<UserInfo> users;
 	private CopyOnWriteArrayList<NodeInfo> nodes;
 	private LinkedHashMap<Character, Long> statistics;
@@ -74,6 +75,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		nodeTimeout = config.getInt("node.timeout");
 		nodeCheckPeriod = config.getInt("node.checkPeriod");
 		controllerRmax = config.getInt("controller.rmax");
+		key = config.getString("key");
 	}
 
 	/**
@@ -150,7 +152,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 * Sets the status of a user to online if this user is not online
 	 * @param username
 	 * @param password
-	 * @return the position on the list of a user, if this user wasn't online, -2 if he was already online or -1 if this user doesn't exist(username or password wrong).
+	 * @return the position on the list of a user, if this user wasn't online, -1 if he was already online.
 	 */
 	public synchronized int setUserOnline(String username){
 		for(UserInfo u : users){
@@ -159,28 +161,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 					u.setStatus(true);
 					return users.indexOf(u);
 				}
-				else{
-					return -2;
-				}
 			}
 		}
 		return -1;
 	}
-	
-//	public synchronized int setUserOnline(String username, String password){
-//		for(UserInfo u : users){
-//			if(u.getUsername().equals(username)&&u.getPassword().equals(password)){
-//				if(!u.isOnline()){
-//					u.setStatus(true);
-//					return users.indexOf(u);
-//				}
-//				else{
-//					return -2;
-//				}
-//			}
-//		}
-//		return -1;
-//	}
 
 	/**
 	 * Sets the users status to offline.
@@ -450,5 +434,9 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	public static void main(String[] args) {
 		CloudController cloudController = new CloudController(args[0], new Config("controller"), System.in, System.out);
 		cloudController.run();
+	}
+
+	public String getKey() {
+		return key;
 	}
 }

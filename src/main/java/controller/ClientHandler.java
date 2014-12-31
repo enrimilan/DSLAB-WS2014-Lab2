@@ -1,6 +1,7 @@
 package controller;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
@@ -8,40 +9,33 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
-import model.NodeInfo;
-import util.Keys;
-import channel.AESEncryptedChannel;
+import org.bouncycastle.util.encoders.Base64;
+
+import channel.AESChannel;
+import channel.Base64Channel;
 import channel.Channel;
-import channel.EDChannel;
 import channel.HmacChannel;
 import channel.IntegrityException;
-import channel.RSAEncryptedChannel;
-import channel.ServerAuthenticator;
+import channel.RSAChannel;
 import channel.TcpChannel;
+import model.NodeInfo;
 
 public class ClientHandler implements Runnable {
 
 	private boolean running = true;
 	private Socket clientSocket;
 	private CloudController cloudController;
-	private boolean loggedIn = false;
 	private int position = -1;
-	private Channel tcpChannel;
-	private AESEncryptedChannel aesEncryptedChannel;
+	private TcpChannel tcpChannel;
+	private AESChannel aesChannel;
 
-	// ServerAuthenticator authenticator;
-
-	ServerAuthenticator serverAuthenticator;
-	PublicKey sendKey;
-	PrivateKey receiveKey;
-
-	public ClientHandler(Socket clientSocket, CloudController cloudController)
-			throws IOException {
+	public ClientHandler(Socket clientSocket, CloudController cloudController) throws IOException{
 		this.clientSocket = clientSocket;
 		this.tcpChannel = new TcpChannel(clientSocket);
 		this.cloudController = cloudController;
@@ -49,20 +43,66 @@ public class ClientHandler implements Runnable {
 
 	/**
 	 * Stops handling requests from the clients.
-	 * 
 	 * @throws IOException
 	 */
-	public void stopRunning() throws IOException {
+	public void stopRunning() throws IOException{
 		running = false;
-		if (loggedIn) {
+		if(position != -1){
 			cloudController.setUserOffline(position);
-			loggedIn = false;
 			position = -1;
 		}
-		if (clientSocket != null)
-			clientSocket.close();
+		if(clientSocket != null) clientSocket.close();
 		tcpChannel.close();
+	}
 
+	private void authenticate(){
+		String username ="";
+		RSAChannel rsaChannel = null;
+		try {
+			rsaChannel = new RSAChannel(new Base64Channel(tcpChannel),new File(cloudController.getKey()));
+			String[] authenticationMessageParts = (new String(rsaChannel.read())).split("\\s+");
+			username = authenticationMessageParts[1];
+			rsaChannel.sendSecondMessage(authenticationMessageParts[2].getBytes(), "keys/controller/"+username+".pub.pem");
+			aesChannel = new AESChannel(new Base64Channel(tcpChannel),rsaChannel.getKey(),rsaChannel.getInitializationVector());
+			byte[] message = aesChannel.read();
+			if(!Arrays.equals(message,Base64.decode(rsaChannel.getChallenge()))){
+				aesChannel.write("Challenges not equal!".getBytes());
+				stopRunning();
+			}
+			else{
+				position = cloudController.setUserOnline(username);
+				if(position != -1){
+					aesChannel.write("Successfully authenticated!".getBytes());
+				}
+				else{
+					aesChannel.write("You are already authenticated somewhere else!".getBytes());
+				}
+			}
+			
+
+
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalBlockSizeException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -71,165 +111,89 @@ public class ClientHandler implements Runnable {
 	@Override
 	public void run() {
 		try {
-
-			// request = ((TcpChannel) tcpChannel).readString();
-			sendKey = Keys.readPublicPEM(new File("keys/controller/" + "alice"
-					+ ".pub.pem"));
-
-			// PrivateKey receiveKey =
-			// Keys.readPrivatePEM(newFile(cloudController.getConfig().getString("key")));
-			receiveKey = Keys.readPrivatePEM(new File(
-					("keys/controller/controller.pem")));
-
-			RSAEncryptedChannel rsaEncryptedChannel = new RSAEncryptedChannel(
-					(TcpChannel) tcpChannel, sendKey, receiveKey);
-
-			serverAuthenticator = new ServerAuthenticator();
-
-			aesEncryptedChannel = serverAuthenticator.rsaAuthenticate(
-					rsaEncryptedChannel, sendKey, receiveKey);
-
-			String username = serverAuthenticator.getUsername();
-
-			cloudController.setUserOnline(username);
-			loggedIn = true;
-
-			if (position != -1 && position != -2) {
-				loggedIn = true;
-			}
-
-			aesEncryptedChannel.send("Logged in successfully");
-
-			String request = "";
-			String response = "";
-			while (running) {
-				if (aesEncryptedChannel == null) {
-					stopRunning();
-				} else {
-
-					request = aesEncryptedChannel.receive();
-					//System.out.println(request);
-
+			while(running){
+				if(position == -1){
+					authenticate();
+				}
+				else{
+					String request="";
+					String response="";
+					request = new String(aesChannel.read());
 					String[] partsOfTheRequest = request.split("\\s+");
 
-					// if(partsOfTheRequest[0].equals("!authenticate")){
-					//
-					//
-					// if(partsOfTheRequest.length != 3){
-					// response ="Too many parameters!";
-					// }
-					// else if(loggedIn){
-					// response = "You are already logged in!";
-					// }
-					// else{
-					// position =
-					// cloudController.setUserOnline(partsOfTheRequest[1],
-					// partsOfTheRequest[2]);
-					// if(position !=-1 && position != -2){
-					// loggedIn = true;
-					// response = "Successfully logged in.";
-					// }
-					// else if(position == -2 ){
-					// response = "You are already logged in!";
-					// }
-					// else{
-					// response = "Wrong username or password.";
-					// }
-					// }
-					// }
-
-					// handle !logout request
-					if (partsOfTheRequest[0].equals("!logout")) {
-						if (partsOfTheRequest.length != 1) {
-							response = "No parameters allowed!";
-						} else if (!loggedIn) {
-							response = "You are not logged in!";
-						} else {
+					//handle !logout request
+					if(partsOfTheRequest[0].equals("!logout")){
+						if(partsOfTheRequest.length != 1){
+							response ="No parameters allowed!";
+						}
+						else{
 							cloudController.setUserOffline(position);
-							loggedIn = false;
 							position = -1;
 							response = "Logged out successfully.";
 						}
 					}
 
-					// handle !credits request
-					else if (partsOfTheRequest[0].equals("!credits")) {
-						if (partsOfTheRequest.length != 1) {
-							response = "No parameters allowed!";
-						} else if (!loggedIn) {
-							response = "You are not logged in!";
-						} else {
-							response = "You have "
-									+ cloudController.getCredits(position)
-									+ " credits left.";
+					//handle !credits request
+					else if(partsOfTheRequest[0].equals("!credits")){
+						if(partsOfTheRequest.length != 1){
+							response ="No parameters allowed!";
+						}
+						else{
+							response = "You have "+cloudController.getCredits(position)+ " credits left.";
 						}
 					}
 
-					// handle !buy request
-					else if (partsOfTheRequest[0].equals("!buy")) {
-						if (partsOfTheRequest.length != 2) {
-							response = "Too many parameters!!";
-						} else if (!loggedIn) {
-							response = "You are not logged in!";
-						} else if (Long.valueOf(partsOfTheRequest[1])
-								.longValue() <= 0) {
+					//handle !buy request
+					else if(partsOfTheRequest[0].equals("!buy")){
+						if(partsOfTheRequest.length != 2){
+							response ="Too many parameters!!";
+						}
+						else if(Long.valueOf(partsOfTheRequest[1]).longValue()<=0){
 							response = "The amount of credits should be greater than 0!";
-						} else {
-							response = "You now have "
-									+ cloudController.modifyCredits(position,
-											Long.valueOf(partsOfTheRequest[1])
-													.longValue()) + " credits.";
+						}
+						else{
+							response = "You now have "+cloudController.modifyCredits(position,Long.valueOf(partsOfTheRequest[1]).longValue())+ " credits.";
 						}
 					}
 
-					// handle !list request
-					else if (partsOfTheRequest[0].equals("!list")) {
-						if (partsOfTheRequest.length != 1) {
-							response = "Too many parameters!!";
-						} else if (!loggedIn) {
-							response = "You are not logged in!";
-						} else {
+					//handle !list request
+					else if(partsOfTheRequest[0].equals("!list")){
+						if(partsOfTheRequest.length != 1){
+							response ="Too many parameters!!";
+						}
+						else{
 							response = cloudController.getAvailableOperations();
 						}
 					}
 
-					// handle !compute request
-					else if (partsOfTheRequest[0].equals("!compute")) {
+					//handle !compute request
+					else if(partsOfTheRequest[0].equals("!compute")){
 						cloudController.increaseStatistics(request);
-						if (!loggedIn) {
-							response = "You are not logged in!";
-						} else if (((partsOfTheRequest.length - 2) / 2) * 50 > cloudController
-								.getCredits(position)) {
+						if(((partsOfTheRequest.length - 2)/2)*50>cloudController.getCredits(position)){
 							response = "You don't have enough credits to perform this operation.";
-						} else {
-							String result = partsOfTheRequest[1]; // first
-																	// operand
+						}
+						else{
+							String result = partsOfTheRequest[1]; //first operand
 							int i = 3;
 							int nrOfOperations = 0;
-							while (i < partsOfTheRequest.length) {
-								NodeInfo node = cloudController
-										.getNodeWithLowestUsage(partsOfTheRequest[i - 1]);
+							while(i<partsOfTheRequest.length){
+								NodeInfo node = cloudController.getNodeWithLowestUsage(partsOfTheRequest[i-1]);
 								try {
-									if (node == null) {
+									if(node == null){
 										result = "No nodes available for at least one operation.";
 										nrOfOperations = 0;
 										break;
-									} else {
+									}
+									else{
 										nrOfOperations++;
-										Socket socket = new Socket(
-												node.getAddress(),
-												node.getTcpPort());
-										String message = "!compute " + result
-												+ " "
-												+ partsOfTheRequest[i - 1]
-												+ " " + partsOfTheRequest[i];
-										try {
-											Channel hC = new HmacChannel(
-													new TcpChannel(socket),
-													cloudController.getSecret());
-											hC.write(message.getBytes());
+										Socket socket = new Socket(node.getAddress(),node.getTcpPort());
+										String message = "!compute "+result +" " +partsOfTheRequest[i-1]+" "+partsOfTheRequest[i];
+										try{
+											Channel hC = new HmacChannel(new TcpChannel(socket),cloudController.getSecret());
+											hC.write(message.getBytes());	
 											result = new String(hC.read());
-										} catch (IntegrityException e) {
+										}
+										catch(IntegrityException e){
 											result = "Incorrect Hash";
 											nrOfOperations = 0;
 											break;
@@ -239,52 +203,47 @@ public class ClientHandler implements Runnable {
 										} catch (NoSuchAlgorithmException e) {
 											// TODO Auto-generated catch block
 											e.printStackTrace();
-										} catch (IOException e) {
+										}
+										catch (IOException e){
 											e.printStackTrace();
 										}
 
-										if (result
-												.contains("Error: division by 0")) {
+										if(result.contains("Error: division by 0")){
 											break;
 										}
-										// at this point, the request has been
-										// processed successfully.
-										if (result.startsWith("-")) {
-											node.increaseUsage(50 * (result
-													.length() - 1));
-										} else {
-											node.increaseUsage(50 * result
-													.length());
+										//at this point, the request has been processed successfully.
+										if(result.startsWith("-")){
+											node.increaseUsage(50*(result.length()-1));
+										}
+										else{
+											node.increaseUsage(50*result.length());
 										}
 
-										i = i + 2;
+										i=i+2;
 										socket.close();
 									}
-								} catch (ConnectException e) {
+								}
+								catch(ConnectException e){
 									node.setStatus(false);
-								} catch (SocketException e) {
+								}
+								catch(SocketException e){
 									node.setStatus(false);
-								} catch (UnknownHostException e) {
-								} catch (IOException e) {
+								}
+								catch (UnknownHostException e) {} 
+								catch (IOException e) {
 									e.printStackTrace();
 								}
 							}
-							cloudController.modifyCredits(position, -50
-									* nrOfOperations);
+							cloudController.modifyCredits(position, -50*nrOfOperations);
 							nrOfOperations = 0;
 							response = result;
 						}
 					}
+					aesChannel.write(response.getBytes());
 				}
 
-				// ((TcpChannel) tcpChannel).writeString(response);
-				aesEncryptedChannel.send(response);
 			}
 			stopRunning();
-		} catch (IOException e) {
-		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		} catch (IOException e) {}
 	}
 }
