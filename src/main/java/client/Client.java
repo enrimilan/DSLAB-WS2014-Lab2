@@ -9,18 +9,10 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.bouncycastle.util.encoders.Base64;
-
 import util.Config;
 import channel.AESChannel;
 import channel.Base64Channel;
@@ -36,6 +28,7 @@ public class Client implements IClientCli, Runnable {
 	private Config config;
 	private String controllerHost;
 	private int controllerTcpPort;
+	private String keysDir;
 	private String controllerKey;
 	private Shell shell;
 	private Socket socket;
@@ -65,6 +58,7 @@ public class Client implements IClientCli, Runnable {
 	private void readClientProperties(){
 		controllerHost = config.getString("controller.host");
 		controllerTcpPort = config.getInt("controller.tcp.port");
+		keysDir = config.getString("keys.dir");
 		controllerKey = config.getString("controller.key");
 	}
 
@@ -96,20 +90,15 @@ public class Client implements IClientCli, Runnable {
 	}
 
 	/**
-	 * Sends a request to the cloud controller, first it writes to the outputstream of the socket and then reads from its inputstream.
-	 * @param request
-	 * 		the request which has to be sent to the cloud controller
-	 * @return
-	 * 		the response from the cloud controller
+	 * Sends a request to the cloud controller and then gets the response, outgoing and ingoing messages are encrypted using the AES algorithm.
+	 * @param request the request which has to be sent to the cloud controller
+	 * @return the response from the cloud controller
 	 * @throws IOException
 	 */
-
 	private String sendRequest(String request) throws IOException{
-
 		if(!authenticated){
 			return "You are not authenticated!";
 		}
-
 		aesChannel.write(request.getBytes());
 
 		String response = "";
@@ -210,7 +199,7 @@ public class Client implements IClientCli, Runnable {
 			return "You are already authenticated";
 		}
 		try {
-			RSAChannel rsaChannel = new RSAChannel(new Base64Channel(tcpChannel), new File("keys/client/"+username+".pem"));
+			RSAChannel rsaChannel = new RSAChannel(new Base64Channel(tcpChannel), new File(keysDir+"/"+username+".pem"));
 			rsaChannel.sendFirstMessage(("!authenticate "+username+" ").getBytes(), controllerKey);
 			String[] okMessageParts = (new String(rsaChannel.read())).split("\\s+");
 			if(!Arrays.equals(Base64.decode(okMessageParts[1]),rsaChannel.getChallenge())){
@@ -220,30 +209,15 @@ public class Client implements IClientCli, Runnable {
 			byte[] secretKey = Base64.decode(okMessageParts[3].getBytes());
 			byte[] initializationVector = Base64.decode(okMessageParts[4].getBytes());
 			SecretKey key = new SecretKeySpec(secretKey, 0, secretKey.length, "AES");
+			
 			aesChannel = new AESChannel(new Base64Channel(tcpChannel),key,initializationVector);
-			aesChannel.write(cloudControllerChallenge);
+			aesChannel.write(cloudControllerChallenge); //first message encrypted in AES
 		} 
 		catch(FileNotFoundException e){
 			return "User not found!";
 		}
-		catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		String response = new String(aesChannel.read());
-		if(!response.contains("already")){
+		if(!response.contains("already") && !response.contains("not equal")){
 			authenticated = true;
 		}
 		return response;

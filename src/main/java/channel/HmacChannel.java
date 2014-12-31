@@ -13,13 +13,21 @@ import org.bouncycastle.util.encoders.Base64;
 
 public class HmacChannel extends ChannelDecorator {
 	
+	private final String algorithm = "HmacSHA256";
 	private Mac hMac;
 
-	public HmacChannel(Channel channel, String secret) throws NoSuchAlgorithmException, InvalidKeyException {
+	public HmacChannel(Channel channel, String secret) {
 		super(channel);
-		Key secretKey = new SecretKeySpec(secret.getBytes(),"HmacSHA256");
-		hMac = Mac.getInstance("HmacSHA256");
-		hMac.init(secretKey);
+		Key secretKey = new SecretKeySpec(secret.getBytes(),algorithm);
+		try {
+			hMac = Mac.getInstance(algorithm);
+			hMac.init(secretKey);
+		} catch (NoSuchAlgorithmException e) {
+			System.err.println("Algorithm" + algorithm + "not found.");
+		} catch (InvalidKeyException e) {
+			System.err.println("Invalid Key: please check the length and encoding of the key.");
+		}
+		
 	}
 
 	@Override
@@ -37,8 +45,6 @@ public class HmacChannel extends ChannelDecorator {
 		System.arraycopy(hash, 0, hmacmsg, 0, hl);
 		hmacmsg[hl] = (byte) s;
 		System.arraycopy(message, 0, hmacmsg, hl+1, ml);
-		
-		//System.out.println(new String(hmacmsg)); // TODO: remove
 		
 		channel.write(hmacmsg);
 	}

@@ -319,6 +319,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		return config.getString("hmac.key");
 	}
 	
+	public String getKey() {
+		return key;
+	}
+	
 	/**
 	 * @return a list with the currently online nodes.
 	 */
@@ -421,10 +425,6 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		adminService.close();
 		return "Shutting down "+componentName+" now.";
 	}
-	
-	public Config getConfig (){
-		return this.config;
-	}
 
 	/**
 	 * @param args
@@ -434,9 +434,5 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	public static void main(String[] args) {
 		CloudController cloudController = new CloudController(args[0], new Config("controller"), System.in, System.out);
 		cloudController.run();
-	}
-
-	public String getKey() {
-		return key;
 	}
 }

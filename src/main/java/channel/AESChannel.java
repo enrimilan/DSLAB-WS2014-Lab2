@@ -20,28 +20,21 @@ public class AESChannel extends ChannelDecorator {
 	
 	public AESChannel(Channel channel,  SecretKey secretKey, byte[] ivParameter) {
 		super(channel);
-
 		IvParameterSpec ivParameterSpec = new IvParameterSpec(ivParameter);
-
 		try {
-		
 			encryption = Cipher.getInstance(algorithm);
 			encryption.init(Cipher.ENCRYPT_MODE, secretKey, ivParameterSpec);
-			
 			decryption = Cipher.getInstance(algorithm);
 			decryption.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec);
-			
 			} catch (InvalidKeyException e) {
-				e.printStackTrace();
+				System.err.println("Invalid Key: please check the length and encoding of the key.");
 			} catch (InvalidAlgorithmParameterException e) {
-				e.printStackTrace();
+				System.err.println("Invalid or inappropriate algorithm parameters.");
 			} catch (NoSuchAlgorithmException e) {
-				e.printStackTrace();
+				System.err.println("Algorithm" + algorithm + "not found.");
 			} catch (NoSuchPaddingException e) {
-				e.printStackTrace();
+				System.err.println("Padding mechanism not available in the environment.");
 			}
-		
-	
 	}
 
 	@Override
@@ -49,13 +42,10 @@ public class AESChannel extends ChannelDecorator {
 		try {
 			channel.write(encryption.doFinal(message));
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Input data is not a multiple of the block-size.");
 		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Bad padding.");
 		}
-		
 	}
 
 	@Override
@@ -63,11 +53,9 @@ public class AESChannel extends ChannelDecorator {
 		try {
 			return decryption.doFinal(channel.read());
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Input data is not a multiple of the block-size.");
 		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Bad padding.");
 		}
 		return null;
 	}
@@ -76,6 +64,4 @@ public class AESChannel extends ChannelDecorator {
 	public void close() throws IOException {
 		channel.close();
 	}
-
-
 }

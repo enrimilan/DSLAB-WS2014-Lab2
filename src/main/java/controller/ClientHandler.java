@@ -1,7 +1,6 @@
 package controller;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
@@ -10,10 +9,6 @@ import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 
 import org.bouncycastle.util.encoders.Base64;
 
@@ -78,30 +73,9 @@ public class ClientHandler implements Runnable {
 					aesChannel.write("You are already authenticated somewhere else!".getBytes());
 				}
 			}
+
+		}catch (IOException e) {
 			
-
-
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 
@@ -197,17 +171,7 @@ public class ClientHandler implements Runnable {
 											result = "Incorrect Hash";
 											nrOfOperations = 0;
 											break;
-										} catch (InvalidKeyException e) {
-											// TODO Auto-generated catch block
-											e.printStackTrace();
-										} catch (NoSuchAlgorithmException e) {
-											// TODO Auto-generated catch block
-											e.printStackTrace();
 										}
-										catch (IOException e){
-											e.printStackTrace();
-										}
-
 										if(result.contains("Error: division by 0")){
 											break;
 										}
@@ -230,9 +194,7 @@ public class ClientHandler implements Runnable {
 									node.setStatus(false);
 								}
 								catch (UnknownHostException e) {} 
-								catch (IOException e) {
-									e.printStackTrace();
-								}
+								catch (IOException e) {}
 							}
 							cloudController.modifyCredits(position, -50*nrOfOperations);
 							nrOfOperations = 0;
