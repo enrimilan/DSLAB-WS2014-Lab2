@@ -89,7 +89,7 @@ public class AlivePacketSender implements Runnable {
 	 * @throws IOException
 	 */
 	private String receiveInfoMessage() throws IOException{
-		byte[] buf = new byte[256];
+		byte[] buf = new byte[4096];
 		DatagramPacket packet = new DatagramPacket(buf, buf.length);
 		socket.receive(packet); //waits forever until it receives the !init msg
 		return new String(packet.getData()).trim();

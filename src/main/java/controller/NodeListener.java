@@ -37,7 +37,7 @@ public class NodeListener implements Runnable{
 	@Override
 	public void run() {
 		while(running){
-			byte[] buf = new byte[18];
+			byte[] buf = new byte[4096];
 			DatagramPacket packet = new DatagramPacket(buf, buf.length);
 			try {
 				socket.receive(packet); //waits forever until it receives a packet
