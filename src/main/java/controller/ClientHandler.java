@@ -6,8 +6,6 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import org.bouncycastle.util.encoders.Base64;
@@ -26,14 +24,20 @@ public class ClientHandler implements Runnable {
 	private boolean running = true;
 	private Socket clientSocket;
 	private CloudController cloudController;
+	private String key;
+	private String hmacKey;
+	private String keysDir;
 	private int position = -1;
 	private TcpChannel tcpChannel;
 	private AESChannel aesChannel;
 
-	public ClientHandler(Socket clientSocket, CloudController cloudController) throws IOException{
+	public ClientHandler(Socket clientSocket, CloudController cloudController, String key, String hmacKey, String keysDir) throws IOException{
 		this.clientSocket = clientSocket;
-		this.tcpChannel = new TcpChannel(clientSocket);
 		this.cloudController = cloudController;
+		this.key = key;
+		this.hmacKey = hmacKey;
+		this.keysDir = keysDir;
+		this.tcpChannel = new TcpChannel(clientSocket);
 	}
 
 	/**
@@ -54,10 +58,10 @@ public class ClientHandler implements Runnable {
 		String username ="";
 		RSAChannel rsaChannel = null;
 		try {
-			rsaChannel = new RSAChannel(new Base64Channel(tcpChannel),new File(cloudController.getKey()));
+			rsaChannel = new RSAChannel(new Base64Channel(tcpChannel),new File(key));
 			String[] authenticationMessageParts = (new String(rsaChannel.read())).split("\\s+");
 			username = authenticationMessageParts[1];
-			rsaChannel.sendSecondMessage(authenticationMessageParts[2].getBytes(), "keys/controller/"+username+".pub.pem");
+			rsaChannel.sendSecondMessage(authenticationMessageParts[2].getBytes(), keysDir+"/"+username+".pub.pem");
 			aesChannel = new AESChannel(new Base64Channel(tcpChannel),rsaChannel.getKey(),rsaChannel.getInitializationVector());
 			byte[] message = aesChannel.read();
 			if(!Arrays.equals(message,Base64.decode(rsaChannel.getChallenge()))){
@@ -163,7 +167,7 @@ public class ClientHandler implements Runnable {
 										Socket socket = new Socket(node.getAddress(),node.getTcpPort());
 										String message = "!compute "+result +" " +partsOfTheRequest[i-1]+" "+partsOfTheRequest[i];
 										try{
-											Channel hC = new HmacChannel(new TcpChannel(socket),cloudController.getSecret());
+											Channel hC = new HmacChannel(new TcpChannel(socket),hmacKey);
 											hC.write(message.getBytes());	
 											result = new String(hC.read());
 										}

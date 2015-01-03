@@ -34,11 +34,12 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 	private String bindingName;
 	private String controllerHost;
 	private int controllerRmiPort;
-	private String keysDir;
 
-	public AdminService(CloudController cloudController) throws RemoteException{
+	public AdminService(CloudController cloudController, String bindingName, String controllerHost, int controllerRmiPort) throws RemoteException{
 		this.cloudController = cloudController;
-		readAdminProperties();
+		this.bindingName = bindingName;
+		this.controllerHost = controllerHost;
+		this.controllerRmiPort = controllerRmiPort;
 		try {
 			registerRemoteObject();
 		} 
@@ -48,17 +49,6 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 		catch (AlreadyBoundException e) {
 			System.err.println("Error while binding remote object to registry. Object alreasy bound.");
 		}
-	}
-
-	/**
-	 * Reads all the parameters from the admin's properties file.
-	 */
-	private void readAdminProperties(){
-		Config config = new Config("admin");
-		bindingName = config.getString("binding.name");
-		controllerHost = config.getString("controller.host");
-		controllerRmiPort = config.getInt("controller.rmi.port");
-		keysDir = config.getString("keys.dir");
 	}
 
 	/**

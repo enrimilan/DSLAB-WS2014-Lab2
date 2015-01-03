@@ -63,7 +63,7 @@ public class Client implements IClientCli, Runnable {
 	}
 
 	/**
-	 * Creates a Socket and connects to the cloud controller, also gets the outputstream(for outgoing messages) and the intputstream(for ingoing messages).
+	 * Creates a Socket and connects to the cloud controller.
 	 * If nothing went wrong i.e the cloud controller is not offline, the shell will be started.
 	 * If the cloud controller is offline, a usage message is printed and the client exits immediately.
 	 */
@@ -104,6 +104,7 @@ public class Client implements IClientCli, Runnable {
 		String response = "";
 		try{
 			response = new String(aesChannel.read());
+			//TODO
 			/*if(response == null){
 				//this check was necessary when running the code on a linux machine
 				close();
@@ -119,7 +120,7 @@ public class Client implements IClientCli, Runnable {
 	}
 
 	/**
-	 * Releases all resources, stops all threads and closes the socket.
+	 * Releases all resources and closes the socket.
 	 * @throws IOException
 	 */
 	private void close() throws IOException{

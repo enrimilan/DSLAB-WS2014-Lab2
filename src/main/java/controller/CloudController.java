@@ -29,8 +29,13 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private int udpPort;
 	private int nodeTimeout;
 	private int nodeCheckPeriod;
-	private int controllerRmax;
 	private String key;
+	private String hmacKey;
+	private String keysDir;
+	private String bindingName;
+	private String controllerHost;
+	private int controllerRmiPort;
+	private int controllerRmax;
 	private ArrayList<UserInfo> users;
 	private CopyOnWriteArrayList<NodeInfo> nodes;
 	private LinkedHashMap<Character, Long> statistics;
@@ -74,8 +79,13 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		udpPort = config.getInt("udp.port");
 		nodeTimeout = config.getInt("node.timeout");
 		nodeCheckPeriod = config.getInt("node.checkPeriod");
-		controllerRmax = config.getInt("controller.rmax");
+		hmacKey = config.getString("hmac.key");
 		key = config.getString("key");
+		keysDir = config.getString("keys.dir");
+		bindingName = config.getString("binding.name");
+		controllerHost = config.getString("controller.host");
+		controllerRmiPort = config.getInt("controller.rmi.port");
+		controllerRmax = config.getInt("controller.rmax");
 	}
 
 	/**
@@ -119,7 +129,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 * Concurrently listens for new connections from the clients. See {@link ClientListener} for more details.
 	 */
 	private void startClientListener(){
-		clientListener = new ClientListener(tcpPort,this);
+		clientListener = new ClientListener(tcpPort, this, key, hmacKey, keysDir);
 		executor.submit(clientListener);
 	}
 
@@ -144,7 +154,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 */
 	private void startAdminService(){
 		try {
-			this.adminService = new AdminService(this);
+			this.adminService = new AdminService(this, bindingName, controllerHost, controllerRmiPort);
 		} catch (RemoteException e) {}
 	}
 
@@ -315,13 +325,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		}
 	}
 	
-	public String getSecret(){
-		return config.getString("hmac.key");
-	}
 	
-	public String getKey() {
-		return key;
-	}
 	
 	/**
 	 * @return a list with the currently online nodes.
