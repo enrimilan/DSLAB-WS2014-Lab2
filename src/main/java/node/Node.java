@@ -89,7 +89,7 @@ public class Node implements INodeCli, Runnable {
 	 * Tells the cloud controller if this node is still alive. See {@link AlivePacketSender} for more details.
 	 */
 	private void startAlivePacketSender(){
-		alivePacketSender = new AlivePacketSender(tcpPort, controllerHost, controllerUdpPort, nodeAlive, nodeOperators,this);
+		alivePacketSender = new AlivePacketSender(tcpPort, controllerHost, controllerUdpPort, nodeAlive, nodeOperators,this,nodeRmin);
 		executor.submit(alivePacketSender);
 	}
 
@@ -138,7 +138,9 @@ public class Node implements INodeCli, Runnable {
 	 * @param resourceLevel the new resource level
 	 */
 	public void commit(int resourceLevel){
-		this.resourceLevel = resourceLevel;
+		if(resourceLevel == newResourceLevel){
+			this.resourceLevel = resourceLevel;
+		}
 	}
 
 	/**
@@ -146,13 +148,6 @@ public class Node implements INodeCli, Runnable {
 	 */
 	public void rollback(){
 		this.newResourceLevel = resourceLevel;
-	}
-
-	/**
-	 * @return the minimum resource level of this node.
-	 */
-	public int getNodeRmin(){
-		return nodeRmin;
 	}
 
 	public String getSecret(){
