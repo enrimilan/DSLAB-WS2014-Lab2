@@ -21,8 +21,6 @@ import model.ComputationRequestInfo;
 
 import org.bouncycastle.util.encoders.Base64;
 
-import util.Config;
-
 /**
  * Listens for requests. In case of !compute request, if the calculation is successful, the resulting number is sent back to the cloud controller. 
  * Otherwise, the cloud controller is informed about the reason of the failure. Each time, a log file is created. See the {@link #run() run} method for more details.
@@ -119,16 +117,15 @@ public class Listener implements Runnable {
 				}
 				else if(splittedExp[0].startsWith("!share")){
 					out = new PrintWriter(clientSocket.getOutputStream(), true);
-					int resources = Integer.valueOf(splittedExp[1]);
-					if(nodeRmin>resources){
+					int resourceLevelForEachNode = Integer.valueOf(splittedExp[1]);
+					if(nodeRmin>resourceLevelForEachNode){
 						response = "!nok";
 					}
 					else{
 						response = "!ok";
-						node.setNewResourceLevel(resources);
+						node.setNewResourceLevel(resourceLevelForEachNode);
 					}
 					out.println(response);
-					out.close();
 				}
 				else if(splittedExp[0].startsWith("!commit")){
 					int resources = Integer.valueOf(splittedExp[1]);
@@ -167,7 +164,6 @@ public class Listener implements Runnable {
 						node.createLogFile(splittedExp[2] + " " +splittedExp[3] + " "+splittedExp[4], response);
 					}
 					out.println(prependResponseWithHMAC(response));
-					out.close();
 				}
 				clientSocket.close();
 			}
