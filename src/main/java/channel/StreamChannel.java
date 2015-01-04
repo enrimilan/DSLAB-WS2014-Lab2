@@ -3,6 +3,7 @@ package channel;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.SocketException;
 
 public class StreamChannel implements Channel {
 	
@@ -21,7 +22,11 @@ public class StreamChannel implements Channel {
 
 	@Override
 	public byte[] read() throws IOException {
-		return in.readLine().getBytes();
+		String response = in.readLine();
+		if(response == null){
+			throw new SocketException();
+		}
+		return response.getBytes();
 	}
 	
 	@Override

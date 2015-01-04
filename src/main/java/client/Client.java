@@ -104,12 +104,6 @@ public class Client implements IClientCli, Runnable {
 		String response = "";
 		try{
 			response = new String(aesChannel.read());
-			//TODO
-			/*if(response == null){
-				//this check was necessary when running the code on a linux machine
-				close();
-				return "Cloud controller suddenly went offline. Shutting down " +componentName + " now";
-			}*/
 		}
 		catch (SocketException e){
 			//cloud controller suddenly went offline. make sure to close all the resources in order to exit this client.
