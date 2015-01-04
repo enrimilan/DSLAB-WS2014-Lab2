@@ -141,6 +141,9 @@ public class Node implements INodeCli, Runnable {
 		if(resourceLevel == newResourceLevel){
 			this.resourceLevel = resourceLevel;
 		}
+		else{
+			System.out.println("Error: resource levels of the !share and !commit messages do not match");
+		}
 	}
 
 	/**
