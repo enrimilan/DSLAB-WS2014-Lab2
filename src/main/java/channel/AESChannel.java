@@ -12,6 +12,9 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
+/**
+ * Messages that are sent are encrypted with the AES algorithm, messages that are received are decrypted back.
+ */
 public class AESChannel extends ChannelDecorator {
 	
 	private final String algorithm = "AES/CTR/NoPadding";

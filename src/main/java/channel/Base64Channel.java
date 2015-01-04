@@ -4,6 +4,9 @@ import java.io.IOException;
 
 import org.bouncycastle.util.encoders.Base64;
 
+/**
+ * Messages that are sent are encrypted in Base64, messages that are received are decrypted back.
+ */
 public class Base64Channel extends ChannelDecorator {
 
 	public Base64Channel(Channel channel) {
