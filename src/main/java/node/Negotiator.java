@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +17,7 @@ import controller.CloudController;
  * As a result of that, the node will or will not join the cloud.
  */
 public class Negotiator {
-	
+
 	private Node node;
 	private AlivePacketSender aps;
 	private DatagramSocket socket;
@@ -25,7 +26,7 @@ public class Negotiator {
 	private int nodeRmin;
 	private boolean allNodesAgreed = true;
 	private ExecutorService executor;
-	
+
 	public Negotiator(Node node, AlivePacketSender aps, DatagramSocket socket, String controllerHost, int controllerUdpPort, int nodeRmin){
 		this.node = node;
 		this.aps = aps;
@@ -34,21 +35,33 @@ public class Negotiator {
 		this.controllerUdpPort = controllerUdpPort;
 		this.nodeRmin = nodeRmin;
 	}
-	
+
 	/**
 	 * Sets allNodesAgreed to false if at least one Node sent a !nok message back to the initiator.
 	 */
 	public synchronized void disagree() {
 		allNodesAgreed = false;
 	}
-	
+
 	/**
 	 * The node has first to negotiate the resources it can claim, before it can join the cloud.
 	 * @throws IOException
 	 */
 	public void negotiate() throws IOException{
-		sendHelloMessage();
-		String infoMessage = receiveInfoMessage();
+		socket.setSoTimeout(2000);
+		String infoMessage = "";
+		while(true){
+			sendHelloMessage();
+			try {
+				infoMessage = receiveInfoMessage();
+				socket.setSoTimeout(0);
+				break;
+			}
+			catch (SocketTimeoutException e) {
+				// no response received after 2 seconds. continue sending !hello messages
+			}
+		}
+
 		//actual beginning of the Two-Phase Commit.
 		String[] parts = infoMessage.split("\\s+");
 		int nrOfOnlineNodes = parts.length - 2;
@@ -69,7 +82,7 @@ public class Negotiator {
 			System.out.println("Can't join cloud!");
 		}
 	}
-	
+
 	/**
 	 * Sends a !hello message to the cloud.
 	 * @throws IOException
@@ -92,7 +105,7 @@ public class Negotiator {
 		socket.receive(packet); //waits forever until it receives the !init msg
 		return new String(packet.getData()).trim();
 	}
-	
+
 	/**
 	 * Sends a message to another node using the {@link MessageSenderForTwoPhaseCommit} runnable object.
 	 * @param nrOfOnlineNodes 
