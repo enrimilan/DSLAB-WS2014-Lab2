@@ -124,7 +124,7 @@ public class Node implements INodeCli, Runnable {
 		catch (UnsupportedEncodingException e) {} 
 		catch (IOException e) {}
 	}
-	
+
 	/**
 	 * Sets a new temporary resource level, which will possibly be the true resource level in case of a successful Two-Phase commit.
 	 * @param resourceLevel the new resource level
@@ -156,7 +156,7 @@ public class Node implements INodeCli, Runnable {
 	public String getSecret(){
 		return new Config(componentName).getString("hmac.key");
 	}
-	
+
 	/**
 	 * @return all the log files of this node as a list of DTOs
 	 * @throws IOException
@@ -210,14 +210,27 @@ public class Node implements INodeCli, Runnable {
 		Node node = new Node(args[0], new Config(args[0]), System.in, System.out);
 		node.run();
 	}
-
-	// --- Commands needed for Lab 2. Please note that you do not have to
-	// implement them for the first submission. ---
-
+	
+	@Command(value="history")
 	@Override
 	public String history(int numberOfRequests) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		String history = "";
+		BufferedReader br = null;
+		File folder = new File(logDir);
+		File[] files = folder.listFiles();
+		for (int i = 0; i<files.length; i++){
+			if(i<numberOfRequests){
+				br = new BufferedReader(new FileReader(logDir+"/"+files[i].getName()));
+				history = history + br.readLine() + " = " + br.readLine() + "\n";
+			}
+		}
+		if(br != null){
+			br.close();
+		}
+		if(history.length()==0){
+			return "There aren't any evaluated expressions";
+		}
+		return history.trim();
 	}
 
 	@Command(value="resources")
