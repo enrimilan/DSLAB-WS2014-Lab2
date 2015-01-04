@@ -5,7 +5,7 @@
 alice:		!credits
 >			verify("500", T(test.util.Flag).NOT)
 
-alice:		!login alice 12345
+alice:		!authenticate alice
 >			verify("success")
 
 alice:		!credits

@@ -2,10 +2,10 @@
 *	Client			client1
 *	Client 			client2
 
-client1:		!login alice 12345
+client1:		!authenticate alice
 >			verify("success")
 
-client2:		!login bill 23456
+client2:		!authenticate bill
 >			verify("success")
 
 client2: 		!buy 200
@@ -23,13 +23,10 @@ client1: 		!logout
 client2: 		!logout
 >			verify("success")
 
-client1: 		!login bill 23456
+client1: 		!authenticate bill
 >			verify("success")
 
-client2: 		!login alice 123456
->			verify("Wrong")
-
-client2: 		!login alice 12345
+client2: 		!authenticate alice
 >			verify("success")
 
 client2: 		!buy 200

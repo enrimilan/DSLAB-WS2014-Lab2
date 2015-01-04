@@ -3,7 +3,7 @@
 *	Node			node1
 *	Node			node4
 
-alice:		!login alice 12345
+alice:		!authenticate alice
 >		verify("success")
 
 alice:		!compute 1 + 1 + 1 + 1 - 1 / 0

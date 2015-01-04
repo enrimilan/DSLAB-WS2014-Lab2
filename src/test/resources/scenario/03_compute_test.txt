@@ -3,10 +3,10 @@
 *	Client			bill
 *	Node			node2
 
-alice:		!login alice 12345
+alice:		!authenticate alice
 >			verify("success")
 
-bill:		!login bill 23456
+bill:		!authenticate bill
 >			verify("success")
 
 alice:		!compute 2 / 2

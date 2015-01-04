@@ -7,18 +7,16 @@
 *	Node			node4
 
 alice:			!credits
->			verify("not logged in!")
+>			verify("not")
 alice: 			!list
->			verify("not logged in!")
+>			verify("not")
 alice:			!compute 5 + 5 
->			verify("not logged in!")
+>			verify("not")
 alice:			!buy 20
->			verify("not logged in!")
+>			verify("not")
 alice:			!logout 
->			verify("not logged in!")
-alice:			!login alice 1234
->			verify("Wrong username or password")
-alice:			!login alice 12345
+>			verify("not")
+alice:			!authenticate alice
 >			verify("success")
 alice:			!list
 alice:			!buy 20
@@ -28,18 +26,16 @@ alice:			!compute 5000 + 432834 - 384378 + 8383 / 3434 + 1 * 44
 node1: 		!exit
 node2:		!exit
 bill:			!credits
->			verify("not logged in!")
+>			verify("not")
 bill: 			!list
->			verify("not logged in!")
+>			verify("not")
 bill:			!compute 5 + 5 
->			verify("not logged in!")
+>			verify("not")
 bill:			!buy 20
->			verify("not logged in!")
+>			verify("not")
 bill:			!logout 
->			verify("not logged in!")
-bill:			!login bill 1234
->			verify("Wrong username or password")
-bill:			!login bill 23456
+>			verify("not")
+bill:			!authenticate bill
 >			verify("success")
 bill:			!compute 5000 + 432834 - 384378 + 8383 / 3434 + 1 * 44
 controller: 	!nodes
