@@ -15,12 +15,18 @@ public class ClientListener implements Runnable {
 	private ServerSocket serverSocket;
 	private int tcpPort;
 	private CloudController cloudController;
+	private String key;
+	private String hmacKey;
+	private String keysDir;
 	private ArrayList<ClientHandler> clientHandlers;
 	private ExecutorService executor;
 
-	public ClientListener(int tcpPort, CloudController cloudController){
+	public ClientListener(int tcpPort, CloudController cloudController, String key, String hmacKey, String keysDir){
 		this.tcpPort = tcpPort;
 		this.cloudController = cloudController;
+		this.key = key;
+		this.hmacKey = hmacKey;
+		this.keysDir = keysDir;
 		clientHandlers = new ArrayList<ClientHandler>();
 		executor = Executors.newCachedThreadPool();
 	}
@@ -40,7 +46,7 @@ public class ClientListener implements Runnable {
 			serverSocket = new ServerSocket(tcpPort);
 			while(running){
 				Socket clientSocket = serverSocket.accept();
-				ClientHandler clientHandler = new ClientHandler(clientSocket,cloudController);
+				ClientHandler clientHandler = new ClientHandler(clientSocket, cloudController, key, hmacKey, keysDir);
 				clientHandlers.add(clientHandler);
 				executor.submit(clientHandler);
 			}

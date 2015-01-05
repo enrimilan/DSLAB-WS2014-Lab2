@@ -20,11 +20,9 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import util.Config;
 import model.ComputationRequestInfo;
 import model.NodeInfo;
 import admin.INotificationCallback;
-import admin.NotificationCallback;
 
 public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 
