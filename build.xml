@@ -21,7 +21,9 @@
 
 	<target name="compile" description="Compile project.">
 		<mkdir dir="${build.dir}" />
-		<javac srcdir="${src.dir};${test.src.dir}" destdir="${build.dir}" classpathref="project.classpath" debug="true" deprecation="true" includeantruntime="false" />
+		<javac srcdir="${src.dir};${test.src.dir}" destdir="${build.dir}"
+			classpathref="project.classpath" debug="true" deprecation="true"
+			includeantruntime="false" />
 		<copy todir="${build.dir}">
 			<fileset dir="${src.resources.dir}">
 				<include name="*.properties" />
@@ -34,7 +36,8 @@
 
 	<target name="test" description="Test the solution" depends="compile">
 		<mkdir dir="${reports.dir}" />
-		<junit includeantruntime="true" logfailedtests="true" showoutput="true" printsummary="true">
+		<junit includeantruntime="true" logfailedtests="true"
+			showoutput="true" printsummary="true">
 			<classpath refid="project.classpath" />
 			<formatter type="plain" />
 			<batchtest fork="false" todir="${reports.dir}">
@@ -46,7 +49,8 @@
 	</target>
 
 	<target name="run-controller" depends="compile" description="Run Cloud-Controller.">
-		<java classname="controller.CloudController" fork="true" classpathref="project.classpath">
+		<java classname="controller.CloudController" fork="true"
+			classpathref="project.classpath">
 			<arg value="controller" />
 		</java>
 	</target>
@@ -78,6 +82,11 @@
 	<target name="run-client" depends="compile" description="Run Client.">
 		<java classname="client.Client" fork="true" classpathref="project.classpath">
 			<arg value="client" />
+		</java>
+	</target>
+	<target name="run-admin" depends="compile" description="Run Admin-Console.">
+		<java classname="admin.AdminConsole" fork="true" classpathref="project.classpath">
+			<arg value="admin" />
 		</java>
 	</target>
 
