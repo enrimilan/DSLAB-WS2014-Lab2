@@ -26,12 +26,13 @@ public class Node implements INodeCli, Runnable {
 
 	private String componentName;
 	private Config config;
+	private int nodeAlive;
 	private String logDir;
+	private String nodeOperators;
 	private int tcpPort;
 	private String controllerHost;
 	private int controllerUdpPort;
-	private int nodeAlive;
-	private String nodeOperators;
+	private String hmacKey;
 	private int nodeRmin;
 	private int resourceLevel;
 	private int newResourceLevel;
@@ -66,12 +67,13 @@ public class Node implements INodeCli, Runnable {
 	 * Reads all the parameters from the node's properties file.
 	 */
 	private void readNodeProperties(){
+		nodeAlive = config.getInt("node.alive");
 		logDir = config.getString("log.dir");
+		nodeOperators = config.getString("node.operators");
 		tcpPort = config.getInt("tcp.port");
 		controllerHost = config.getString("controller.host");
 		controllerUdpPort = config.getInt("controller.udp.port");
-		nodeAlive = config.getInt("node.alive");
-		nodeOperators = config.getString("node.operators");
+		hmacKey = config.getString("hmac.key");
 		nodeRmin = config.getInt("node.rmin");
 		resourceLevel = 0;
 		newResourceLevel = 0;
@@ -97,7 +99,7 @@ public class Node implements INodeCli, Runnable {
 	 * Listens for requests from the cloud controller and other nodes. See {@link Listener} for more details.
 	 */
 	private void startListener(){
-		listener = new Listener(tcpPort,this,nodeRmin);
+		listener = new Listener(tcpPort,this,nodeRmin,hmacKey);
 		executor.submit(listener);
 	}
 
@@ -151,10 +153,6 @@ public class Node implements INodeCli, Runnable {
 	 */
 	public void rollback(){
 		this.newResourceLevel = resourceLevel;
-	}
-
-	public String getSecret(){
-		return new Config(componentName).getString("hmac.key");
 	}
 
 	/**

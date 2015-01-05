@@ -1,5 +1,6 @@
 package channel;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -7,25 +8,29 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.util.encoders.Base64;
+
+import util.Keys;
 
 public class HmacChannel extends ChannelDecorator {
 	
 	private final String algorithm = "HmacSHA256";
 	private Mac hMac;
 
-	public HmacChannel(Channel channel, String secret) {
+	public HmacChannel(Channel channel, String hmacKey) {
 		super(channel);
-		Key secretKey = new SecretKeySpec(secret.getBytes(),algorithm);
+		
 		try {
+			Key secretKey = Keys.readSecretKey(new File(hmacKey));
 			hMac = Mac.getInstance(algorithm);
 			hMac.init(secretKey);
 		} catch (NoSuchAlgorithmException e) {
 			System.err.println("Algorithm" + algorithm + "not found.");
 		} catch (InvalidKeyException e) {
 			System.err.println("Invalid Key: please check the length and encoding of the key.");
+		} catch (IOException e) {
+			System.err.println("IOException: maybe the file does not exist.");
 		}
 		
 	}

@@ -1,6 +1,7 @@
 package node;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
@@ -15,11 +16,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 
 import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 
 import model.ComputationRequestInfo;
 
 import org.bouncycastle.util.encoders.Base64;
+
+import util.Keys;
 
 /**
  * Listens for requests. In case of !compute request, if the calculation is successful, the resulting number is sent back to the cloud controller. 
@@ -36,22 +38,21 @@ public class Listener implements Runnable {
 	private BufferedReader in;
 	private Mac hMac;
 
-	public Listener(int tcpPort, Node node, int nodeRmin){
+	public Listener(int tcpPort, Node node, int nodeRmin,String hmacKey){
 		this.node = node;
 		this.tcpPort = tcpPort;
 		this.nodeRmin = nodeRmin;
-		Key secretKey = new SecretKeySpec(node.getSecret().getBytes(),"HmacSHA256");
 		try {
+			Key secretKey = Keys.readSecretKey(new File(hmacKey));
 			hMac = Mac.getInstance("HmacSHA256");
 			hMac.init(secretKey);
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Algorithm HmacSHA256 not found.");
 		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Invalid Key: please check the length and encoding of the key.");
+		} catch (IOException e) {
+			System.err.println("IOException: maybe the file does not exist.");
 		}
-		
 	}
 
 	/**
