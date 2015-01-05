@@ -20,7 +20,8 @@ import channel.TcpChannel;
 import model.NodeInfo;
 
 public class ClientHandler implements Runnable {
-
+	
+	final String B64 = "a-zA-Z0-9/+";
 	private boolean running = true;
 	private Socket clientSocket;
 	private CloudController cloudController;
@@ -59,14 +60,17 @@ public class ClientHandler implements Runnable {
 		RSAChannel rsaChannel = null;
 		try {
 			rsaChannel = new RSAChannel(new Base64Channel(tcpChannel),new File(key));
-			String[] authenticationMessageParts = (new String(rsaChannel.read())).split("\\s+");
+			String firstMessage = new String(rsaChannel.read());
+			String[] authenticationMessageParts = firstMessage.split("\\s+");
+			if(!firstMessage.matches("!authenticate \\w+ ["+B64+"]{43}=")){
+				stopRunning();
+			}
 			username = authenticationMessageParts[1];
 			rsaChannel.sendSecondMessage(authenticationMessageParts[2].getBytes(), keysDir+"/"+username+".pub.pem");
 			aesChannel = new AESChannel(new Base64Channel(tcpChannel),rsaChannel.getKey(),rsaChannel.getInitializationVector());
 			byte[] message = aesChannel.read();
 			if(!Arrays.equals(message,Base64.decode(rsaChannel.getChallenge()))){
-				aesChannel.write("Challenges not equal!".getBytes());
-				stopRunning();
+				aesChannel.write("Authentication failed: Challenges not equal!".getBytes());
 			}
 			else{
 				position = cloudController.setUserOnline(username);

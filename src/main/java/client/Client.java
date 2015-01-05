@@ -10,9 +10,12 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+
 import org.bouncycastle.util.encoders.Base64;
+
 import util.Config;
 import channel.AESChannel;
 import channel.Base64Channel;
@@ -24,6 +27,7 @@ import cli.Shell;
 
 public class Client implements IClientCli, Runnable {
 
+	final String B64 = "a-zA-Z0-9/+";
 	private String componentName;
 	private Config config;
 	private String controllerHost;
@@ -72,6 +76,27 @@ public class Client implements IClientCli, Runnable {
 			socket = new Socket(controllerHost,controllerTcpPort);
 			this.tcpChannel = new TcpChannel(socket);
 			startShell();
+		}
+		catch(ConnectException e) {
+			//cloud controller is not online, therefore this client will not even start.
+			System.err.println("Cloud controller is offline");
+		}
+		catch (UnknownHostException e) {} 
+		catch (IOException e) {}
+	}
+
+	/**
+	 * Creates a Socket and restarts this client to reconnect to the cloud controller.
+	 * If nothing went wrong i.e the cloud controller is not offline, the shell will be started.
+	 * If the cloud controller is offline, a usage message is printed and the client exits immediately.
+	 * @throws IOException 
+	 */
+	private void restartCloudControllerAndShell() throws IOException{
+		close();
+		try {
+			socket = new Socket(controllerHost,controllerTcpPort);
+			this.tcpChannel = new TcpChannel(socket);
+			new Thread(shell).start();
 		}
 		catch(ConnectException e) {
 			//cloud controller is not online, therefore this client will not even start.
@@ -196,20 +221,30 @@ public class Client implements IClientCli, Runnable {
 		try {
 			RSAChannel rsaChannel = new RSAChannel(new Base64Channel(tcpChannel), new File(keysDir+"/"+username+".pem"));
 			rsaChannel.sendFirstMessage(("!authenticate "+username+" ").getBytes(), controllerKey);
-			String[] okMessageParts = (new String(rsaChannel.read())).split("\\s+");
+			String secondMessage = new String(rsaChannel.read());
+			String[] okMessageParts = secondMessage.split("\\s+");
 			if(!Arrays.equals(Base64.decode(okMessageParts[1]),rsaChannel.getChallenge())){
-				return "Challenges not equal!";
+				restartCloudControllerAndShell();
+				return "Authentication failed: Challenges not equal!";
+			}
+			if(!secondMessage.matches("!ok ["+B64+"]{43}= ["+B64+"]{43}= ["+B64+"]{43}= ["+B64+"]{22}==")){
+				restartCloudControllerAndShell();
+				return "Authentication failed: Syntax of the received second message not ok.";
 			}
 			byte[] cloudControllerChallenge = Base64.decode(okMessageParts[2].getBytes());
 			byte[] secretKey = Base64.decode(okMessageParts[3].getBytes());
 			byte[] initializationVector = Base64.decode(okMessageParts[4].getBytes());
 			SecretKey key = new SecretKeySpec(secretKey, 0, secretKey.length, "AES");
-			
+
 			aesChannel = new AESChannel(new Base64Channel(tcpChannel),key,initializationVector);
 			aesChannel.write(cloudControllerChallenge); //first message encrypted in AES
 		} 
 		catch(FileNotFoundException e){
 			return "User not found!";
+		}
+		catch(SocketException e){
+			restartCloudControllerAndShell();
+			return "Authentication failed: Syntax of the first message not ok.";
 		}
 		String response = new String(aesChannel.read());
 		if(!response.contains("already") && !response.contains("not equal")){
