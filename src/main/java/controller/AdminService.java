@@ -10,6 +10,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.ExportException;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.Key;
 import java.text.ParseException;
@@ -44,9 +45,7 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 		catch (RemoteException e) {
 			System.err.println("Error while starting AdminService.");
 		} 
-		catch (AlreadyBoundException e) {
-			System.err.println("Error while binding remote object to registry. Object alreasy bound.");
-		}
+		catch (AlreadyBoundException e) {}
 	}
 
 	/**
@@ -56,7 +55,13 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 	 * @throws AlreadyBoundException
 	 */
 	private void registerRemoteObject() throws AccessException, RemoteException, AlreadyBoundException{
-		registry = LocateRegistry.createRegistry(controllerRmiPort);
+		try{
+			registry = LocateRegistry.createRegistry(controllerRmiPort);
+		}
+		catch(ExportException e){
+			//this exception was thrown when using the ant-script.
+			registry = LocateRegistry.getRegistry(controllerRmiPort);
+		}
 		registry.bind(bindingName, this);
 	}
 
@@ -163,14 +168,14 @@ public class AdminService extends UnicastRemoteObject implements IAdminConsole {
 			throws RemoteException {
 		// We don't have to implement this method.
 	}
-	
+
 	/**
 	 * Unbind and exit the AdminService.
 	 */
 	public void close() {
 		try {
-			registry.unbind(bindingName);
 			UnicastRemoteObject.unexportObject(this,true);
+			registry.unbind(bindingName);
 		} catch (RemoteException e) {
 			System.err.println("Unbind error.");
 		} catch (NotBoundException e) {
