@@ -5,6 +5,7 @@
 *	Node			node2
 *	Node			node3
 *	Node			node4
+* 	AdminConsole	admin
 
 alice:			!credits
 >			verify("not")
@@ -39,6 +40,9 @@ bill:			!authenticate bill
 >			verify("success")
 bill:			!compute 5000 + 432834 - 384378 + 8383 / 3434 + 1 * 44
 controller: 	!nodes
+
+admin:			!statistics
+
 controller: 	!exit
 node3: 			!exit
 bill: 			!buy 20
@@ -52,3 +56,9 @@ node4: 			!exit
 
 controller:		!users
 controller:		!nodes
+controller:		!exit
+alice:			!exit
+node1: 			!exit
+node2: 			!exit
+node3: 			!exit
+node4: 			!exit

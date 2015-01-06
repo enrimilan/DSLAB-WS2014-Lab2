@@ -2,6 +2,7 @@
 *	Client			alice
 *	Client			bill
 *	Node			node2
+* 	AdminConsole	admin
 
 alice:		!authenticate alice
 >			verify("success")
@@ -19,6 +20,8 @@ bill: 		!compute 2 / 2
 
 controller:	!users
 >			verify(".*alice.*online.*450.*bill.*online.*500.*", T(test.util.Flag).REGEX)
+
+admin:		!statistics
 
 controller: !nodes
 >			verify(".*11983.*Usage: 50.*", T(test.util.Flag).REGEX)

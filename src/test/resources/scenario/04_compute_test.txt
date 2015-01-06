@@ -2,6 +2,7 @@
 *	Client			alice
 *	Node			node1
 *	Node			node4
+* 	AdminConsole	admin
 
 alice:		!authenticate alice
 >		verify("success")
@@ -31,6 +32,8 @@ alice:		!credits
 > 		verify("0")
 
 node1: 		!exit
+
+admin:		!statistics
 
 controller:	!nodes
 
