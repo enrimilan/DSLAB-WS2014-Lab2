@@ -1,5 +1,6 @@
 *	CloudController	controller
 *	Node			node1
+*	AdminConsole	admin
 
 node1: 			!resources
 >			verify("1000")
@@ -14,6 +15,8 @@ node1: 			!resources
 
 node2: 			!resources
 >			verify("500")
+
+admin:			!statistics
 
 controller: 	!nodes
 

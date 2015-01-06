@@ -1,9 +1,12 @@
 *	CloudController	controller
 *	Client			alice
 *	Node			node1
+*	AdminConsole 	admin
 
 alice:		!credits
 >			verify("500", T(test.util.Flag).NOT)
+
+admin:		!getLogs
 
 alice:		!authenticate alice
 >			verify("success")

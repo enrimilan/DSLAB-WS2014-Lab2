@@ -1,6 +1,7 @@
 *	CloudController	controller
 *	Client			client1
 *	Client 			client2
+*	AdminConsole	admin
 
 client1:		!authenticate alice
 >			verify("success")
@@ -8,6 +9,7 @@ client1:		!authenticate alice
 client2:		!authenticate alice
 >			verify("already")
 
+admin:			!statistics
 controller:	!users
 >			verify(".*alice.*online.*bill.*offline.*", T(test.util.Flag).REGEX)
 
