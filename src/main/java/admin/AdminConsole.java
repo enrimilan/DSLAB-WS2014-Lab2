@@ -59,13 +59,14 @@ public class AdminConsole implements IAdminConsole, Runnable {
 	/**
 	 * Gets the reference to the AdminService component.
 	 */
-	private void getReferenceToTheRemoteObject(){
+	private void getReferenceToTheRemoteObjectAndStartShell(){
 		Registry registry = null;
 		try{
 			// obtain registry that was created by the server
 			registry = LocateRegistry.getRegistry(controllerHost,controllerRmiPort);
 			// look for the bound server remote-object implementing the IServer interface
 			adminService = (IAdminConsole) registry.lookup(bindingName);
+			startShell();
 		} catch (RemoteException e) {
 			System.err.println("Error while obtaining registry/AdminService-remote-object.");
 		} catch (NotBoundException e) {
@@ -87,8 +88,7 @@ public class AdminConsole implements IAdminConsole, Runnable {
 	@Override
 	public void run() {
 		readAdminProperties();
-		getReferenceToTheRemoteObject();
-		startShell();
+		getReferenceToTheRemoteObjectAndStartShell();
 	}
 
 	@Command(value="subscribe")
