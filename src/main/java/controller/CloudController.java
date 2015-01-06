@@ -309,17 +309,18 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 * @param term
 	 */
 	public synchronized void increaseStatistics(String term){
-		for(int i=0; i<term.length(); i++){
-			if(term.charAt(i)=='+'){
+		String[] operators = term.split("\\s+");
+		for(int i=0; i<operators.length; i++){
+			if(operators[i].equals("+")){
 				statistics.put('+', statistics.get('+') + 1);
 			}
-			if(term.charAt(i)=='-'){
+			if(operators[i].equals("-")){
 				statistics.put('-', statistics.get('-') + 1);
 			}
-			if(term.charAt(i)=='*'){
+			if(operators[i].equals("*")){
 				statistics.put('*', statistics.get('*') + 1);
 			}
-			if(term.charAt(i)=='/'){
+			if(operators[i].equals("/")){
 				statistics.put('/', statistics.get('/') + 1);
 			}
 		}
