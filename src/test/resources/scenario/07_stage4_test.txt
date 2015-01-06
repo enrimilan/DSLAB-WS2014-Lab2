@@ -1,0 +1,35 @@
+*	CloudController	controller
+*	Client			alice
+*	Client			bill
+* 	AdminConsole	admin
+
+admin:			!getLogs
+
+*	Node			node1
+
+admin:			!getLogs
+
+*	Node			node4
+
+admin:			!getLogs
+
+controller:		!nodes
+
+bill:			!authenticate bill
+
+admin:			!subscribe bill 500
+admin:			!subscribe bill 400
+admin:			!subscribe alan 500
+admin:			!subscribe alice 600
+bill:			!compute 2 - -2
+alice:			!authenticate alice
+admin:			!subscribe bill 400
+alice:			!compute 2 + 1 - 2 + 50 / 3 * 2
+bill:			!compute 2 + 2 + 1
+admin:			!statistics
+
+node1:			!exit
+node4:			!exit
+controller:		!exit
+bill:			!exit
+alice:			!exit
