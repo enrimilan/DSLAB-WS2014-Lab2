@@ -374,6 +374,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		if(callback!=null && user.getCredits()<user.getThreshold()){
 			try {
 				callback.notify(user.getUsername(), (int) user.getThreshold());
+				user.unsubscribe();
 			} catch (RemoteException e) {}
 		}
 	}

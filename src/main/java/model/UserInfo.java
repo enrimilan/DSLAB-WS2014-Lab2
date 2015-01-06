@@ -50,6 +50,11 @@ public class UserInfo{
 		this.threshold = threshold;
 	}
 	
+	public void unsubscribe(){
+		callback = null;
+		threshold = 0;
+	}
+	
 	public INotificationCallback getCallback(){
 		return callback;
 	}
